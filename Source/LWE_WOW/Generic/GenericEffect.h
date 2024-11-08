@@ -12,6 +12,8 @@
 #include "GenericEffect.generated.h"
 
 class UStaticMeshComponent;
+class USphereComponent;
+class UGenericSkill;
 class IInteractable;
 
 // 스킬 이펙트 액터입니다.
@@ -29,9 +31,6 @@ public:
 	virtual void PostActorCreated()                override;
 
 public:
-	using Skill = CAct::Skill;
-
-public:
 	CSeeker Seeker{ this }; // 전진 방향 계산 헬퍼
 
 public:
@@ -39,14 +38,33 @@ public:
 	void Enable(float DeltTime);
 
 public:
-	static void Spawn(Skill* InSkill, AGenericCharacter* InParent, AGenericCharacter* InTarget);
+	using FnSkillMethod = void (USkillData::*)(UGenericSkill*, AGenericCharacter*, AGenericCharacter*, AGenericEffect*) const;
+
+	// Execute, OnTick, Final 호출하는 함수입니다.
+	// 내부적으로 non-target 스킬인지에 따라 해당 함수를 호출하게 되어있습니다.
+	void SkillMethod(FnSkillMethod);
+
+public:
+	static AGenericEffect* Spawn(UGenericSkill* InSkill, AGenericCharacter* InParent, AGenericCharacter* InTarget);
+	static AGenericEffect* Spawn(UGenericSkill* InSkill, AGenericCharacter* InParent, AGenericCharacter* InTarget, const FVector& InPos);
+
+	// 스킬 데이터를 기반으로 내부에서 생성할 때 사용합니다.
+	static AGenericEffect* Spawn(USkillData* InSkillData, int InLevel, const TCHAR* const InName,
+		AGenericCharacter* InParent, AGenericCharacter* InTarget, const FVector& InPos);
+
+private:
+	static AGenericEffect* Spawn(USkillData*, AGenericCharacter*, const FVector&);
+	void                   Initialize(USkillData*, int, const TCHAR* const, AGenericCharacter*, AGenericCharacter*, const FVector&);
 
 protected:
+	UPROPERTY()
+	UGenericSkill* m_Status; // Strong Reference: 스킬 상태 == 정보입니다.
+
+protected:
+	USphereComponent*     m_Area;             // 캡슐(범위) 컴포넌트
 	UStaticMeshComponent* m_Mesh;             // 메시 컴포넌트
 	AGenericCharacter*    m_Parent;           // 시전자입니다.
 	AGenericCharacter*    m_Target;           // 타겟입니다.
-	USkillData*           m_Data;             // 스킬 정보입니다.
-	FSkillInfo            m_Info;             // 스킬 정보입니다
 	float                 m_Interval;         // 스킬 시전 중 정보입니다.
 	float                 m_Duration;         // 스킬 시전 중 정보입니다.
 	int                   m_Level;            // 해당 스킬의 레벨입니다.

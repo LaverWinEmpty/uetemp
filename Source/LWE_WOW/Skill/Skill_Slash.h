@@ -16,7 +16,7 @@ class LWE_WOW_API USkillSlash : public USkillData
 
 	USkillSlash();
 
-	virtual void Execute(const FSkillInfo&, AGenericCharacter*, AGenericCharacter*) const override;
-	virtual void Final  (const FSkillInfo&, AGenericCharacter*, AGenericCharacter*) const override;
-	virtual void OnTick (const FSkillInfo&, AGenericCharacter*, AGenericCharacter*) const override;
+	virtual void Execute(UGenericSkill*, AGenericCharacter*, AGenericCharacter*, AGenericEffect*) const override;
+	virtual void Final  (UGenericSkill*, AGenericCharacter*, AGenericCharacter*, AGenericEffect*) const override;
+	virtual void OnTick (UGenericSkill*, AGenericCharacter*, AGenericCharacter*, AGenericEffect*) const override;
 };

@@ -19,11 +19,15 @@ struct LWE_WOW_API FCharacterData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	USkeletalMesh* Mesh;
 
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	FVector MeshLocationAdjust;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	FRotator MeshRotationAdjust;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
+	FVector Scale = { 1, 1, 1 };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	TSubclassOf<UAnimInstance> AnimationBase;
@@ -33,6 +37,12 @@ struct LWE_WOW_API FCharacterData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	UAnimMontage* AnimationCasting;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimMontage* AnimationDead;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	UAnimMontage* AnimationHit;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Material")
 	TArray<UMaterial*> Material;

@@ -17,11 +17,17 @@ class LWE_WOW_API AGenericPlayer : public AGenericCharacter
 
 public:
 	ETargetType GetType() const;
+
+public:
+	virtual void Dead() override;
 	
 public:
 	virtual void BeginPlay() override;
 
 public:
-	void SetSkillSlot(EActionID InID, Skill* InSkill);
+	virtual void View(const FVector&) override;
+
+public:
+	void SetSkillSlot(EActionID InID, UGenericSkill* InSkill);
 
 };

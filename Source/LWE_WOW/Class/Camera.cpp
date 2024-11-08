@@ -54,7 +54,6 @@ bool CCamera::Setup(ACharacter* InParent)
 		return true;
 	}
 
-
 	ensure(false);
 	return false;
 }

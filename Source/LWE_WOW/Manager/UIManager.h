@@ -30,6 +30,9 @@ public:
     void Cleanup();
 
 public:
+    void Reset();
+
+public:
     UUIManager();
     
 public:
@@ -45,7 +48,7 @@ public:
     inline void SetTargetInfo(AActor* In);
 
 public:
-	void HideMessageBox();
+	void HideExitDialogBox();
 
     void ShowMessageBox();
 
@@ -57,6 +60,10 @@ public:
 
 	UFUNCTION()
     void YesButton();
+
+public:
+    void OnDead();
+    void OnResurrect();
 
 public:
     FTimerHandle MessageBoxStarter;
@@ -71,6 +78,7 @@ public:
 private:
 	UWidget*    m_Dialog_Exit;
     UTextBlock* m_MsgBox;
+    UImage*     m_DeadOverride;
 
 private:
     bool m_IsSetup         = false;

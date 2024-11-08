@@ -6,6 +6,7 @@
 #include <LWE_WOW/Class/Target.h>
 #include <LWE_WOW/Class/Buff.h>
 #include <LWE_WOW/Class/Act.h>
+#include <LWE_WOW/Status/CharacterInfo.h>
 
 #include "CoreMinimal.h"
 #include "InputAction.h"
@@ -19,13 +20,11 @@
 
 class UWidgetComponent;
 class USkillData;
+class UGageUI;
 
 UCLASS()
 class LWE_WOW_API AGenericCharacter : public ACharacter, public IInteractable {
 	GENERATED_BODY()
-
-public:
-	using Skill = CAct::Skill;
 
 public:
 	AGenericCharacter();
@@ -46,22 +45,31 @@ public:
 public:
 	virtual void Initialize();
 
+public:
+	virtual void OnHit(AGenericCharacter* InHiter);
+
 protected:
-	void MoveTick();
+	virtual void MoveTick();
 
 public:
 	void MoveDerection();
 	void MoveAuto();
 
 public:
+	void ToggleAutoMove();
+
+public:
 	virtual float GetPower()      const;
 	virtual float GetResistance() const;
 
 public:
-	void Dead();
+	virtual void Dead();
 
 public:
-	bool Damage(const FSkillInfo& InSkillInfo, AGenericCharacter* InOther, bool UseCritical = true);
+	virtual void View(const FVector&);
+
+public:
+	bool Damage(UGenericSkill* InSkillInfo, AGenericCharacter* InOther, bool UseCritical = true);
 
 public:
 	void StartTargetMove(const FVector&);
@@ -74,7 +82,7 @@ public:
 	int PlayAnimationDead(int InMontageSectionIndex);
 
 public:
-	Skill GetSkillInfo(USkillData*);
+	UGenericSkill* GetSkillInfo(USkillData*);
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Movement")
@@ -102,7 +110,7 @@ public:
 	int Level;
 
 public:
-	UPROPERTY(BlueprintReadWrite, Category = "Information")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
 	ETeamType Team = ETeamType::NONE;
 
 public:
@@ -126,9 +134,17 @@ public:
 	UGageUI* CastBar; // 포인터 저장용
 
 public:
-	TMap<USkillData*, Skill>  SkillList;  // 배운 스킬 목록입니다.
-	TMap<EActionID,   Skill*> SkillSlots; // 바인딩 된 스킬 목록입니다.
-	TArray<USkillData*>       SkillTable; // 배운 스킬 인덱싱용 배열입니다.
+	/*
+		잠재적 이슈
+		Skill이 단순 구조체이기 때문에 Info를 읽는게 스택 데이터를 읽음 
+		해당 객체가 사라졌으나 버프 등 Info를 읽어야 하는 상황 발생 시 문제
+
+		수정 완료
+	*/
+	
+	TMap<USkillData*, UGenericSkill*> SkillList;  // 배운 스킬 목록입니다.
+	TMap<EActionID,   UGenericSkill*> SkillSlots; // 바인딩 된 스킬 목록입니다.
+	TArray<USkillData*>               SkillTable; // 배운 스킬 인덱싱용 배열입니다.
 
 public:
 	CTarget Target  = CTarget(this); // 타겟팅 유틸입니다.
@@ -144,6 +160,7 @@ public:
 	UAnimMontage*  DeadMotion;
 	UAnimMontage*  AttackMotion;
 	UAnimMontage*  CastingMotion;
+	UAnimMontage*  HitMotion;
 
 public:
 	// 입력으로 인한 이동상태인지 확인합니다.
@@ -166,4 +183,7 @@ public:
 
 	// 무시당하는 상태(은신 등)인지 확인합니다.
 	UPROPERTY(BlueprintReadOnly, Category = "Flag") uint32 IsIgnore : 1 = false;
+
+	// 회전하는 상태인지 확인합니다.
+	UPROPERTY(BlueprintReadOnly, Category = "Flag") uint32 IsRotating : 1 = false;
 };

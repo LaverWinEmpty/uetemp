@@ -1,25 +1,20 @@
 #include "Target.h"
 
+#include <LWE_WOW/Generic/GenericCharacter.h>
 #include <LWE_WOW/Manager/UIManager.h>
 
-CTarget::CTarget(IInteractable* InParent) : This(InParent), Other(nullptr), Relation(ERelationType::NONE)
+CTarget::CTarget(IInteractable* InParent) : m_This(InParent), m_Other(nullptr), m_Relation(ERelationType::NONE)
 {
 }
 
 void CTarget::Setting(IInteractable* InTarget)
 {
-	Other = InTarget;
-	if (Other) {
-		Relation = This->GetRelation(InTarget);
-		Other->OnTargetting();
+	m_Other = InTarget;
+	if (m_Other) {
+		m_Relation = m_This->GetRelation(InTarget);
+		m_Other->OnTargetting();
 	}
-	else Relation = ERelationType::NONE;
-
-	if (AActor* Actor = Cast<AActor>(This)) {
-		// nullptr 허용
-		UUIManager::Instance(Actor)->SetTargetInfo(Cast<AActor>(Other));
-	}
-
+	else m_Relation = ERelationType::NONE;
 }
 
 void CTarget::SettingActor(AActor* InTarget)
@@ -34,21 +29,21 @@ void CTarget::Unsetting()
 
 IInteractable* CTarget::Get()
 {
-	return Other;
-}
-
-AActor* CTarget::GetTargettingActor()
-{
-	return Cast<AActor>(Other);
+	return m_Other;
 }
 
 ERelationType CTarget::GetRelation() const
 {
-	return Relation;
+	return m_Relation;
+}
+
+bool CTarget::IsSelf() const
+{
+	return m_This == m_Other;
 }
 
 CTarget::operator bool()
 {
-	return Other != nullptr;
+	return m_Other != nullptr;
 }
 

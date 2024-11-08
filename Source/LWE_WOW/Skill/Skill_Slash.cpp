@@ -1,7 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Skill_Slash.h"
+
+#include <LWE_WOW/Generic/GenericCharacter.h>
 
 USkillSlash::USkillSlash() : USkillData()
 {
@@ -20,16 +21,18 @@ USkillSlash::USkillSlash() : USkillData()
 	);
 }
 
-void USkillSlash::Execute(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillSlash::Execute(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
 }
 
-void USkillSlash::Final(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillSlash::Final(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
 }
 
-void USkillSlash::OnTick(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillSlash::OnTick(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
+	Super::OnTick(In, InCaster, InTarget, InActor);
+
 	InCaster->Damage(In, InTarget);
 	ApplyBuff(InTarget);
 }

@@ -29,6 +29,8 @@ class LWE_WOW_API AGenericInput : public APlayerController
 {
 	GENERATED_BODY()
 
+	static constexpr float PLAYER_MESH_HIDE_ZOOM = 50;
+
 public:
 	AGenericInput();
 	~AGenericInput();
@@ -62,9 +64,9 @@ public:
 	virtual void Initialize(UEnhancedInputComponent*);
 
 public:
-	virtual void PostInput(bool,             EActionID, ETriggerEvent);
-	virtual void PostInput(float,            EActionID, ETriggerEvent);
-	virtual void PostInput(const FVector2d&, EActionID, ETriggerEvent);
+	virtual bool PostInput(bool,             EActionID, ETriggerEvent);
+	virtual bool PostInput(float,            EActionID, ETriggerEvent);
+	virtual bool PostInput(const FVector2d&, EActionID, ETriggerEvent);
 
 public:
 	template<typename T> void OnInput(const FInputActionInstance& InAction) {
@@ -78,6 +80,10 @@ public:
 
 public:
 	void PlayerAction(EActionID);
+
+public:
+	void SetTargetOfPlayer(IInteractable* InOther);
+	void UnsetTargetOfPlayer();
 
 public:
 	// 마우스 왼쪽 버튼을 누르기 시작한 시점에만 호출됩니다.
@@ -95,9 +101,13 @@ public:
 public:
 	void Look(const FVector2d& InValue, EModFlag InFlag);
 	void LookFollow();
+	void Jump();
 	void Zoom(float InValue);
 	void Move(const FVector2d&, bool);
 	void MoveTarget(const FVector& InTarget);
+
+public:
+	USpringArmComponent* GetCameraArm();
 
 protected:
 	AGenericCharacter*                    m_Player;

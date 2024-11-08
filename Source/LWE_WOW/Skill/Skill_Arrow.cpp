@@ -4,6 +4,7 @@
 #include "Skill_Arrow.h"
 
 #include <LWE_WOW/Generic/GenericCharacter.h>
+#include <LWE_WOW/Generic/GenericEffect.h>
 
 USkillArrow::USkillArrow() : USkillData()
 {
@@ -14,22 +15,23 @@ USkillArrow::USkillArrow() : USkillData()
 
 	Target = static_cast<uint8>(ERelationType::HARM);
 
-	// 옵션:  시야 내 객체만 가능 | 회피 가능
+	// 옵션:  시야 내 객체만 가능
 	Option = static_cast<uint8>(
-		ESkillFlag::LIMIT_VIEW | ESkillFlag::IS_DODGEABLE
+		ESkillFlag::LIMIT_VIEW
 	);
 }
 
-void USkillArrow::Execute(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillArrow::Execute(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
 }
 
-void USkillArrow::Final(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillArrow::Final(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
+	Super::Final(In, InCaster, InTarget, InActor);
 	InCaster->Damage(In, InTarget);
 	ApplyBuff(InTarget);
 }
 
-void USkillArrow::OnTick(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillArrow::OnTick(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
 }

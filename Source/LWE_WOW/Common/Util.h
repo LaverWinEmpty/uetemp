@@ -73,7 +73,7 @@ struct LWE_WOW_API CUtil
 		꼴로 사용
 	*/
 	template<typename T> inline static bool Check(T         InObject,
-													LogOption InFlag = ON_SUCCEEDED_TO_CONSOLE | ON_FAILED_TO_DISPLAY)
+                                                  LogOption InFlag = ON_SUCCEEDED_TO_CONSOLE | ON_FAILED_TO_DISPLAY)
 	{
 		bool Valid;
 
@@ -168,4 +168,13 @@ struct LWE_WOW_API CUtil
 	//template<class E> static auto EInt(E InEnumValue) {
 	//	return static_cast<std::make_unsigned_t<std::underlying_type_t<E>>>(InEnumValue);
 	//}
+	
+	static bool IsIn(AActor* A, AActor* B, float InDistance);
+	static bool IsIn(AActor* A, const FVector& B, float InDistance);
+	static bool IsIn(const FVector& A, const FVector& B, float InDistance);
+	static bool IsIn(const FVector& A, AActor* B, float InDistance);
+
+	static FVector2d To2D(const FVector&);
+	static FVector3d To3D(const FVector2d&);
+	static FVector3d RemoveZ(const FVector&);
 };

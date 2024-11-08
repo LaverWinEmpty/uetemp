@@ -55,26 +55,33 @@ class LWE_WOW_API ALobbyInput : public AGenericInput
 		HideMessageBox();
 
 		m_Clicked = nullptr; // 초기화
+
+		m_Camera->SetArmHeight(0);
 	}
 
 
 public:
-	virtual void PostInput(bool, EActionID, ETriggerEvent) {
+	virtual bool PostInput(bool, EActionID, ETriggerEvent) {
 		// 클릭만 있음
 
-		// 플래그: 메세지 박스 활성화됨
+		// 플래그: 메세지 박스 활성화됨	
 		if (m_bShowMessageBox) {
 			++DebugMode;
 			if (DebugMode == 10) {
+				if (m_Clicked) {
+					UPlayerManager::Instance(this)->PlayerNameOfDatatableRow = m_Clicked->RowName;
+				}
+				else UPlayerManager::Instance(this)->PlayerNameOfDatatableRow = _T("");
 				UGameplayStatics::OpenLevel(GetWorld(), _T("TestMap"));
 			}
-			return;
+			return true;
 		}
 		else DebugMode = 0;
 
 		// 좌클릭만 처리해서 이동 시 반환 false
 		auto Hit = OnMouseClick();
 		if (Hit) {
+
 			m_Clicked = Cast<AGenericCharacter>(Hit->GetActor());
 			if (m_Clicked == m_Player) {
 				m_Clicked = nullptr;
@@ -92,7 +99,13 @@ public:
 				};
 
 				// 몽타주 재생 중이 아닐 때만
-				if (!m_Clicked->AnimationBase->Montage_IsPlaying(m_Clicked->AttackMotion)) {
+				if (!m_Clicked->AnimationBase->IsAnyMontagePlaying()) {
+					// 50% 확률로 캐스팅모션
+					if (FMath::Rand() & 1) {
+						m_Clicked->AnimationBase->Montage_Play(m_Clicked->CastingMotion);
+						return true;
+					}
+
 					// 몽타주 재생
 					m_Clicked->AnimationBase->Montage_Play(m_Clicked->AttackMotion);
 					// 랜덤
@@ -100,6 +113,8 @@ public:
 				}
 			}
 		}
+
+		return true;
 	}
 
 public:

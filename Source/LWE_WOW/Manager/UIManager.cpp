@@ -47,10 +47,17 @@ void UUIManager::Setup()
     Btn = Cast<UButton>(Panel->GetChildAt(1));
     Btn->OnClicked.AddDynamic(this, &UUIManager::NoButton);
 
+    // 종료 다이얼로그
     m_Dialog_Exit = Cast<UWidget>(Panel);
 
+    // on / off
     m_bShowExitDialog = true;
-    HideMessageBox();
+    HideExitDialogBox();
+
+    Panel = Cast<UPanelWidget>(Root->GetChildAt(4));
+    m_DeadOverride = Cast<UImage>(Panel->GetChildAt(0));
+
+    m_DeadOverride->SetVisibility(ESlateVisibility::Hidden); // 죽으면 회색빛으로 override, 숨김
 
     m_MsgBox = Widgets[UI_MAIN]->WidgetTree->FindWidget<UTextBlock>("MessageBox");
 }
@@ -66,6 +73,12 @@ void UUIManager::Cleanup()
     TimerManager.ClearTimer(MessageBoxUpdater);
 }
 
+void UUIManager::Reset()
+{
+    Cleanup();
+    Setup();
+}
+
 UPanelWidget* UUIManager::GetRoot(UUserWidget* In)
 {
     if (UWidget* Root = In->GetRootWidget()) {
@@ -76,9 +89,10 @@ UPanelWidget* UUIManager::GetRoot(UUserWidget* In)
 
 UUIManager* UUIManager::Instance(UObject* InWorldContextObject)
 {
-    if (void* Ptr = UGameplayStatics::GetGameInstance(InWorldContextObject->GetWorld())) {
-        Ptr = static_cast<UGameInstance*>(Ptr)->GetSubsystem<UUIManager>();
-        return static_cast<UUIManager*>(Ptr);
+    if (UGameInstance* GI = UGameplayStatics::GetGameInstance(InWorldContextObject->GetWorld())) {
+        if (UUIManager* Self = GI->GetSubsystem<UUIManager>()) {
+            return Self;
+        }
     }
     return nullptr;
 }
@@ -94,7 +108,7 @@ void UUIManager::SetTargetInfo(AActor* In)
     }
 }
 
-void UUIManager::HideMessageBox()
+void UUIManager::HideExitDialogBox()
 {
     if (!m_bShowExitDialog) {
         return;
@@ -119,13 +133,23 @@ void UUIManager::ExitButton()
 
 void UUIManager::NoButton()
 {
-    HideMessageBox();
+    HideExitDialogBox();
 }
 
 void UUIManager::YesButton()
 {
     Cleanup();
     UGameplayStatics::OpenLevel(GetWorld(), _T("LobbyMap"));
+}
+
+void UUIManager::OnDead()
+{
+    m_DeadOverride->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UUIManager::OnResurrect()
+{
+    m_DeadOverride->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UUIManager::SetMessageText(const TCHAR* const InString)

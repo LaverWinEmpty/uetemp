@@ -10,8 +10,12 @@ bool CSeeker::Setting(AGenericCharacter* In)
 	if (!In->Target) {
 		return false;
 	}
-	Setting(In->GetActorLocation(), In->Target.GetTargettingActor()->GetActorLocation());
-	return true;
+
+	if (AGenericCharacter* Temp = In->Target.Get<AGenericCharacter>()) {
+		Setting(In->GetActorLocation(), Temp->GetActorLocation());
+		return true;
+	}
+	return false;
 }
 
 void CSeeker::Setting(AActor* InActor, const FVector& InEnd)
@@ -30,8 +34,12 @@ bool CSeeker::SetTarget(AGenericCharacter* In)
 	if (!In->Target) {
 		return false;
 	}
-	SetTarget(In->Target.GetTargettingActor()->GetActorLocation());
-	return true;
+
+	if (AGenericCharacter* Temp = In->Target.Get<AGenericCharacter>()) {
+		SetTarget(Temp->GetActorLocation());
+		return true;
+	}
+	return false;
 }
 
 void CSeeker::SetTarget(const FVector& InTarget)

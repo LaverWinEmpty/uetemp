@@ -3,6 +3,7 @@
 
 #include "SkillData.h"
 
+#include <LWE_WOW/Generic/GenericEffect.h>
 #include <LWE_WOW/Generic/GenericCharacter.h>
 
 int USkillData::AdjustLevel(int InLevel) const
@@ -38,9 +39,9 @@ USkillData::USkillData()
 	Default.Scale = 1;
 }
 
-void USkillData::Execute(const FSkillInfo&, AGenericCharacter*, AGenericCharacter*) const { /* Pure */ }
-void USkillData::Final  (const FSkillInfo&, AGenericCharacter*, AGenericCharacter*) const { /* Pure */ }
-void USkillData::OnTick (const FSkillInfo&, AGenericCharacter*, AGenericCharacter*) const { /* Pure */ }
+void USkillData::Execute(UGenericSkill*, AGenericCharacter* InParent, AGenericCharacter* InTarget, AGenericEffect* InActor) const { InTarget->OnHit(InParent); }
+void USkillData::Final  (UGenericSkill*, AGenericCharacter* InParent, AGenericCharacter* InTarget, AGenericEffect* InActor) const { InTarget->OnHit(InParent); }
+void USkillData::OnTick (UGenericSkill*, AGenericCharacter* InParent, AGenericCharacter* InTarget, AGenericEffect* InActor) const { InTarget->OnHit(InParent); }
 
 void USkillData::ApplyBuff(AGenericCharacter* InTarget) const
 {

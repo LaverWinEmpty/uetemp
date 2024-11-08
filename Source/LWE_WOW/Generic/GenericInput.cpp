@@ -2,8 +2,11 @@
 
 #include "GenericInput.h"
 
+#include "Kismet/GameplayStatics.h"
+
 #include <LWE_WOW/Generic/GenericCharacter.h>
 #include <LWE_WOW/Generic/GenericEffect.h>
+#include <LWE_WOW/Generic/GenericSkill.h>
 #include <LWE_WOW/Manager/UIManager.h>
 #include <LWE_WOW/Manager/PlayerManager.h>
 
@@ -67,8 +70,9 @@ void AGenericInput::Initialize(UEnhancedInputComponent* InEIC)
 	Mapping(IA_COMMAND_8, EKeys::Nine );
 	Mapping(IA_COMMAND_9, EKeys::Zero );
 
+	// 안전한 생성을 위해 Cleanup -> Setup
 	if (UUIManager* Instance = UUIManager::Instance(this)) {
-		Instance->Setup();
+		Instance->Reset();
 	}
 }
 
@@ -156,16 +160,18 @@ void AGenericInput::OnMouseLeftClick(bool InFlag)
 
 			// 눌린 게 있는지 확인
 			if (m_Left.Flag && m_Left.Target) {
-				m_Player->Target.Setting(m_Left.Target);
+				// 타겟 지정 후
+				SetTargetOfPlayer(m_Left.Target);
+
 				// 상호작용 없는 객체 == NPC 등이라면
 				if (m_Player->Target.GetRelation() == ERelationType::NONE) {
-					FVector Vector = m_Player->Target.GetTargettingActor()->GetActorForwardVector();
+					FVector Vector = m_Player->Target.Get<AGenericCharacter>()->GetActorForwardVector();
 					// 해당 객체 바로 앞까지 이동합니다.
 					MoveTarget(FVector{ Vector.X, Vector.Y, 0 });
 				}
 			}
+			else UnsetTargetOfPlayer(); // 없으면 타겟 초기화
 
-			else m_Player->Target.Unsetting(); // 없으면 타겟 초기화
 			m_Left.Flag = false; // 기록 초기화
 		}
 		m_Player->IsMouseMove = false; // 마우스 해제: 마우스 이동 정지
@@ -194,7 +200,7 @@ void AGenericInput::OnMouseRightClick(bool InFlag)
 			if (m_Right.Flag) {
 				// 적이면 공격하기 위해 타겟팅
 				if (m_Right.Target && m_Right.Target->GetRelation(m_Player) == ERelationType::HARM) {
-					m_Player->Target.Setting(m_Right.Target);
+					SetTargetOfPlayer(m_Right.Target);
 				}
 				// 타겟이 없으면(IInteractable 객체가 아니면) 이동
 				else if (!m_Right.Target) {
@@ -212,8 +218,41 @@ void AGenericInput::OnMouseRightClick(bool InFlag)
 void AGenericInput::PlayerAction(EActionID InID)
 {
 	if (m_Player->SkillSlots.Find(InID)) {
-		m_Player->Act.Start(m_Player->SkillSlots[InID]);
+		// 스킬 시전 성공 시
+		CAct::EResult Result = m_Player->Act.Start(m_Player->SkillSlots[InID]);
+
+		if (CAct::IsOK(Result)) {
+			// 시야 제한이 있는 스킬의 경우 스킬을 바라보기 위해 적 방향으로 회전 (타겟이 있는 경우)
+			if ((m_Player->SkillSlots[InID]->Data->Option & static_cast<uint8>(ESkillFlag::LIMIT_VIEW)) && 
+				m_Player->Target && !m_Player->Target.IsSelf()) {
+				// 카메라 고정 적용됨
+				m_Player->View(m_Player->Target.Get<AActor>()->GetActorLocation());
+			}
+		}
+
+		else {
+			UUIManager::Instance(this)->SetMessageText(CAct::GetMessage(Result));
+		}
 	}
+}
+
+void AGenericInput::SetTargetOfPlayer(IInteractable* InOther)
+{
+	AActor* Actor = Cast<AActor>(InOther); // 검증
+#if WITH_EDITOR
+	ensure(Actor);
+#endif
+
+	m_Player->Target.Setting(InOther);
+	// 입력으로 인한 타겟 지정 == 플레이어 -> UI 출력
+	UUIManager::Instance(this)->SetTargetInfo(Actor);
+}
+
+void AGenericInput::UnsetTargetOfPlayer()
+{
+	m_Player->Target.Unsetting();
+	// 입력으로 인한 타겟 지정 == 플레이어 -> UI 출력
+	UUIManager::Instance(this)->SetTargetInfo(nullptr);
 }
 
 TOptional<FHitResult> AGenericInput::OnMouseClick()
@@ -226,11 +265,34 @@ TOptional<FHitResult> AGenericInput::OnMouseClick()
 		return NullOpt;             // 이동 시 작동 종료
 	}
 
-	// 클릭을 검사합니다
 	FHitResult Result;
 	if (GetHitResultUnderCursorForObjects(m_Trace, true, Result)) {
 		return Result;
 	}
+
+	//FVector2d Screen;
+	//FVector WorldOrigin, WorldDirection;
+
+	//GetMousePosition(Screen.X, Screen.Y);
+
+	//UGameplayStatics::DeprojectScreenToWorld(this, Screen, WorldOrigin, WorldDirection);
+
+	//// 레이캐스트를 위한 끝 점 계산
+	//FVector TraceEnd = WorldOrigin + (WorldDirection * 10000);
+
+	//FCollisionQueryParams QueryParams;
+	//QueryParams.AddIgnoredActor(this); // 자기 자신은 무시
+
+	//FHitResult HitResult;
+	//GetWorld()->LineTraceSingleByChannel(HitResult, WorldOrigin, TraceEnd, ECC_Visibility, QueryParams);
+
+	//// 검증
+	//if (AActor* Hit = HitResult.GetActor()) {
+	//	// 클릭 가능한 객체일 때
+	//	if (Cast<IInteractable>(HitResult.GetActor())) {
+	//		return HitResult;
+	//	}
+	//}
 	return NullOpt;
 }
 
@@ -295,58 +357,69 @@ void AGenericInput::BindPushKey(UEnhancedInputComponent* InEIC, EActionID InID)
 	InEIC->BindAction(m_IA[InID], ETriggerEvent::Completed, this, &AGenericInput::OnInput<bool>);
 }
 
-void AGenericInput::PostInput(bool InValue, EActionID InID, ETriggerEvent InType)
+bool AGenericInput::PostInput(bool InValue, EActionID InID, ETriggerEvent InType)
 {
+	// 마우스 클릭 우선 처리
 	switch (InID) {
-	case IA_JUMP: m_Player->Jump(); break;
-	case IA_AUTO:
-		// 자동이동 끄고 켜기
-		if (m_Player->IsAutoMove)
-			m_Player->IsAutoMove = false;
-		else m_Player->StartAutoMove();
-		break; 
-
-	case IA_MOVE_F: Move(FVector2d(FVector::ForwardVector.X,  FVector::ForwardVector.Y),  InValue); break;
-	case IA_MOVE_B: Move(FVector2d(FVector::BackwardVector.X, FVector::BackwardVector.Y), InValue); break;
-	case IA_MOVE_L: Move(FVector2d(FVector::LeftVector.X,     FVector::LeftVector.Y),     InValue); break;
-	case IA_MOVE_R: Move(FVector2d(FVector::RightVector.X,    FVector::RightVector.Y),    InValue); break;
-
-	case IA_ALT_L:   CUtil::SetFlag(m_Mod, MOD_SHIFT_L, InValue); break;
-	case IA_CTRL_L:  CUtil::SetFlag(m_Mod, MOD_CTRL_L,  InValue); break;
-	case IA_SHIFT_L: CUtil::SetFlag(m_Mod, MOD_SHIFT_L, InValue); break;
-
-	case IA_COMMAND_0:
-	case IA_COMMAND_1:
-	case IA_COMMAND_2:
-	case IA_COMMAND_3:
-	case IA_COMMAND_4:
-	case IA_COMMAND_5:
-	case IA_COMMAND_6:
-	case IA_COMMAND_7:
-	case IA_COMMAND_8:
-	case IA_COMMAND_9:
-		if(InValue)
-			PlayerAction(InID);
-		break;
-		
-
-	case IA_MOUSE_L: OnMouseLeftClick(InValue);  break;
-	case IA_MOUSE_R: OnMouseRightClick(InValue); break;
+		case IA_MOUSE_L: OnMouseLeftClick(InValue);  break;
+		case IA_MOUSE_R: OnMouseRightClick(InValue); break;
 	}
+
+	// 죽어있으면 입력 불가
+	if (m_Player->IsDead)
+		return false;
+
+	switch (InID) {
+		case IA_JUMP: Jump(); break;
+		case IA_AUTO: m_Player->ToggleAutoMove(); break;
+
+		case IA_MOVE_F: Move(FVector2d(FVector::ForwardVector.X,  FVector::ForwardVector.Y),  InValue); break;
+		case IA_MOVE_B: Move(FVector2d(FVector::BackwardVector.X, FVector::BackwardVector.Y), InValue); break;
+		case IA_MOVE_L: Move(FVector2d(FVector::LeftVector.X,     FVector::LeftVector.Y),     InValue); break;
+		case IA_MOVE_R: Move(FVector2d(FVector::RightVector.X,    FVector::RightVector.Y),    InValue); break;
+
+		case IA_ALT_L:   CUtil::SetFlag(m_Mod, MOD_SHIFT_L, InValue); break;
+		case IA_CTRL_L:  CUtil::SetFlag(m_Mod, MOD_CTRL_L,  InValue); break;
+		case IA_SHIFT_L: CUtil::SetFlag(m_Mod, MOD_SHIFT_L, InValue); break;
+
+		case IA_COMMAND_0:
+		case IA_COMMAND_1:
+		case IA_COMMAND_2:
+		case IA_COMMAND_3:
+		case IA_COMMAND_4:
+		case IA_COMMAND_5:
+		case IA_COMMAND_6:
+		case IA_COMMAND_7:
+		case IA_COMMAND_8:
+		case IA_COMMAND_9:
+			if(InValue)
+				PlayerAction(InID);
+			break;
+	}
+
+	return true;
 }
 
-void AGenericInput::PostInput(float InValue, EActionID InID, ETriggerEvent InType)
+bool AGenericInput::PostInput(float InValue, EActionID InID, ETriggerEvent InType)
 {
-	switch (InID) {
-		case IA_ZOOM: Zoom(InValue); break;
+	if (InID == IA_ZOOM) {
+		Zoom(InValue);
 	}
+
+	if (m_Player->IsDead)
+		return false;
+	return true;
 }
 
-void AGenericInput::PostInput(const FVector2d& InValue, EActionID InID, ETriggerEvent InType)
+bool AGenericInput::PostInput(const FVector2d& InValue, EActionID InID, ETriggerEvent InType)
 {
-	switch (InID) {
-		case IA_LOOK: Look(InValue, m_Mod); break;
+	if (InID == IA_LOOK) {
+		Look(InValue, m_Mod);
 	}
+
+	if (m_Player->IsDead)
+		return false;
+	return true;
 }
 
 void AGenericInput::Look(const FVector2d& InValue, EModFlag InFlag)
@@ -359,7 +432,6 @@ void AGenericInput::Look(const FVector2d& InValue, EModFlag InFlag)
 	// 오른쪽 버튼을 누르면 캐릭터가 카메라와 동기화 됩니다 (고정 기능)
 	if (InFlag & EModFlag::MOD_MOUSE_R) {
 		LookFollow();
-
 		// 타겟 이동 정지합니다
 		m_Player->IsTargetMove = false;
 	}
@@ -367,15 +439,32 @@ void AGenericInput::Look(const FVector2d& InValue, EModFlag InFlag)
 
 void AGenericInput::LookFollow()
 {
+	// 죽어있으면 회전하지 않음
+	if (m_Player->IsDead) {
+		return;
+	}
+
 	// 캐릭터를 카메라 회전과 일치시킵니다.
 	FRotator CameraRotator = m_Camera->GetCameraArmComponent()->GetComponentRotation();
 	m_Player->SetActorRotation(FRotator{ 0, CameraRotator.Yaw, 0 });
 	m_Camera->GetCameraArmComponent()->SetWorldRotation(CameraRotator);
 }
 
+void AGenericInput::Jump()
+{
+	m_Player->Act.Cancel();
+	m_Player->Jump();
+}
+
 void AGenericInput::Zoom(float InValue)
 {
 	m_Camera->Zoom(InValue * CameraZoomUnit);
+	if (m_Camera->ZoomValue < PLAYER_MESH_HIDE_ZOOM) {
+		m_Player->GetMesh()->SetOwnerNoSee(true);
+	}
+	else {
+		m_Player->GetMesh()->SetOwnerNoSee(false);
+	}
 }
 
 void AGenericInput::MoveTarget(const FVector& InTarget)
@@ -385,8 +474,18 @@ void AGenericInput::MoveTarget(const FVector& InTarget)
 
 	m_Player->StartTargetMove(InTarget);
 
-	// 카메라를 역회전하여 각도를 유지합니다.
+	// 카메라 각도를 유지합니다.
 	m_Camera->GetCameraArmComponent()->SetWorldRotation(CameraRotator);
+
+	// 플레이어 이동 시 스킬 시전 취소
+	m_Player->Act.Cancel();
+}
+
+USpringArmComponent* AGenericInput::GetCameraArm()
+{
+	if (m_Camera)
+		return m_Camera->GetCameraArmComponent();
+	return nullptr;
 }
 
 void AGenericInput::Move(const FVector2d& InDirection, bool InInput)
@@ -421,6 +520,9 @@ void AGenericInput::Move(const FVector2d& InDirection, bool InInput)
 		else if (Y < -1) Y = -1; // -1로 보정
 	}
 	m_Player->StartInputMove(FVector2d{ X, Y }, true);
+
+	// 플레이어 이동 시 스킬 시전 취소
+	m_Player->Act.Cancel();
 }
 
 
@@ -434,3 +536,19 @@ void AGenericInput::Move(const FVector2d& InDirection, bool InInput)
 //		MeshComponent->SetStaticMesh(NewMesh);
 //	}
 //}
+
+//// 카메라의 위치를 유지하기 위해 저장합니다.
+//FRotator CameraRotator = m_Camera->GetCameraArmComponent()->GetComponentRotation();
+
+//// 스킬 시전 방향으로 회전합니다.
+//
+//AGenericCharacter* Temp = m_Player->Target.Get<AGenericCharacter>();
+//check(Temp);
+//
+//FVector Direction = Temp->GetActorLocation() - m_Player->GetActorLocation();
+//Direction.Z = 0; // Z축은 무시합니다.
+//Direction.Normalize();
+//m_Player->SetActorRotation(Direction.Rotation());
+
+//// 카메라 각도를 유지합니다.
+//m_Camera->GetCameraArmComponent()->SetWorldRotation( CameraRotator );

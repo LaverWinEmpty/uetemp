@@ -18,6 +18,7 @@ public class LWE_WOW : ModuleRules
             "UMG",
             "Slate",
             "SlateCore",
+            "AIModule",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });

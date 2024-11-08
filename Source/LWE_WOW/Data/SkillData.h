@@ -13,30 +13,52 @@
 
 #include "SkillData.generated.h"
 
-class AGenericCharacter;
 class UAnimMontage;
+class AGenericCharacter;
+class AGenericEffect;
+class UGenericSkill;
 
 // 이펙트 플래그
 UENUM(BlueprintType, Meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
 enum class ESkillFlag : uint8 {
 	NONE,
-	IGNORE_STAT  = 1 << 0 UMETA(DisplayName = "Ignore resistance stat"),
-	LIMIT_VIEW   = 1 << 1 UMETA(DisplayName = "Can use when target is visible only"),
-	TOGGLE       = 1 << 2 UMETA(DisplayName = "On/Off skill"),
-	IS_SUMMON    = 1 << 3 UMETA(DisplayName = "Summon or trap skill"),
-	IS_DODGEABLE = 1 << 4 UMETA(DisplayName = "Target can dodge"),
-	IS_GUIDED    = 1 << 5 UMETA(DisplayName = "Follow target (visual)"),
-	IS_SELF      = 1 << 6 UMETA(DisplayName = "If no target, use to self"),
-	IS_TO_DEAD   = 1 << 7 UMETA(DisplayName = "Use to dead character"),
+	// 정면에서만 사용할 수 있습니다.
+	LIMIT_VIEW    = 1 << 0 UMETA(DisplayName = "Limit View"),
+	// On/Off 스킬입니다.
+	TOGGLE        = 1 << 1 UMETA(DisplayName = "Toggle"),
+	// 발사하는 동안 (비주얼적으로) 유도됩니다.
+	IS_GUIDED     = 1 << 2 UMETA(DisplayName = "Guided"),
+	// 발사하고난 후 (비주얼적으로) 달라붙습니다.
+	IS_FOLLOW     = 1 << 3 UMETA(DisplayName = "Follow"),
+	// 논타겟 스킬입니다.
+	IS_NON_TARGET = 1 << 4 UMETA(DisplayName = "Non-target"),
+	// 소환형 스킬입니다.
+	IS_SUMMON     = 1 << 5 UMETA(DisplayName = "Summon"),
+	// 자기 자신에게 사용 가능합니다.
+	IS_CAN_SELF   = 1 << 6 UMETA(DisplayName = "Can Self"),
+	// 죽은 상대에게 사용 가능합니다.
+	IS_CAN_DEAD   = 1 << 7 UMETA(DisplayName = "Can Dead"),
 };
 ENUM_CLASS_FLAGS(ESkillFlag);
+
+// 이펙트 플래그 회전 관련
+UENUM(BlueprintType, Meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
+enum class ESkillRotateOption : uint8 {
+	NONE,
+	// 발사 도중 회전하는지 여부입니다.
+	ROTATE_ON_TICK_SHOOT  = 1 << 0 UMETA(DisplayName = "Rotate on shoot in Tick"),
+	// 발사가 끝나고 유지하는 동안 회전하는지 여부입니다.
+	ROTATE_ON_TICK_ENABLE = 1 << 1 UMETA(DisplayName = "Rotate on enable in Tick"),
+	// 발사가 끝나면 목표 회전 값으로 보정할 것인지 여부입니다.
+	ROTATE_END = 1 << 2 UMETA(DisplayName = "Rotate adjust in Enable"),
+};
+ENUM_CLASS_FLAGS(ESkillRotateOption);
 
 UCLASS(Blueprintable)
 class LWE_WOW_API USkillData : public UDataAsset
 {
 	GENERATED_BODY()
 
-	
 public:
 	USkillData();
 
@@ -48,11 +70,17 @@ public:
 
 		스킬(Effect)이 Spawn되면 목표를 향해 이동하거나, 설치하는 등의 효과가 발생합니다.
 		그 이후 Execute가 호출됩니다.
+
+		Parameter
+		UGenericSkill     In       스킬 정보입니다.
+		AGenericCharacter InCaster 시전자입니다.
+		AGenericCharacter InTarget 타겟입니다.
+		AGenericEffect    InActor  현재 스킬로 생성된 이펙트 액터입니다.
 	*/
 
-	virtual void Execute(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
-	virtual void Final  (const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
-	virtual void OnTick (const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
+	virtual void Execute(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const;
+	virtual void Final  (UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const;
+	virtual void OnTick (UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const;
 
 public:
 	// 사용할 메시
@@ -62,7 +90,16 @@ public:
 	// 사용할 머테리얼
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	TArray<UMaterial*> Material;
-		
+
+	// 메시 보정
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
+
+	FRotator Rotation;
+
+	// 파생 스킬들, 필요한 경우에만 사용
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
+	TArray<TSubclassOf<USkillData>> Next;
+
 	// 스킬 이름
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
 	FName Name = "Unknown";
@@ -102,6 +139,18 @@ public:
 	// 스킬 자체 최대 레벨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
 	int MaxLevel = 1;
+
+	// 틱마다 회전하고 싶을 때 사용
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
+	FVector RotOnTick = { 0, 0, 0 };
+
+	// 틱 끝나고 최종 회전값
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
+	FRotator RotEndTick = { 0, 0, 0 };
+	
+	// 회전 값 옵션
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information", Meta = (Bitmask, BitmaskEnum = ESkillRotateOption))
+	uint8 RotOpt = static_cast<uint8>(ESkillRotateOption::NONE);
 
 	// 배울 수 있는 직업
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information", Meta = (Bitmask, BitmaskEnum = EClassCode))

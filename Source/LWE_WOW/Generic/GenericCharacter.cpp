@@ -8,6 +8,7 @@
 #include <LWE_WOW/Common/Constants.h>
 #include <LWE_WOW/Data/CharacterData.h>
 #include <LWE_WOW/Generic/GenericEffect.h>
+#include <LWE_WOW/Generic/GenericSkill.h>
 #include <LWE_WOW/Manager/UIManager.h>
 #include <LWE_WOW/UI/GageUI.h>
 
@@ -26,7 +27,7 @@ AGenericCharacter::AGenericCharacter()
 	check(Ptr);
 	static_cast<UCapsuleComponent*>(Ptr)->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	static_cast<UCapsuleComponent*>(Ptr)->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
-	
+
 	// 생성은 HP만 (MP, SP 생성하지 않음)
 	HP.UI = CreateDefaultSubobject<UWidgetComponent>(_T("HPBar"));
 	HP.UI->SetupAttachment(RootComponent);
@@ -48,6 +49,9 @@ void AGenericCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	PrimaryActorTick.bCanEverTick = true;
+	bUseControllerRotationYaw = false;
+
 	Initialize();
 }
 
@@ -61,11 +65,27 @@ void AGenericCharacter::Tick(float DeltaTime)
 	MoveTick();
 	Act.OnTick(DeltaTime);
 	Effects.OnTick(DeltaTime);
+
+	// 쿨타임 적용
+	auto Itr = SkillList.begin(), End = SkillList.end();
+	while(Itr != End){
+		UGenericSkill* ItrSkill = Itr.Value();
+		if (ItrSkill->Cooldown != 0) {
+			ItrSkill->Cooldown -= DeltaTime;
+			if (ItrSkill->Cooldown <= 0) {
+				ItrSkill->Cooldown = 0;
+			}
+		}
+		++Itr;
+	}
 }
 
 void AGenericCharacter::Initialize()
 {
-		if (USkeletalMeshComponent* Ptr = GetMesh()) {
+	HPBar   = Cast<UGageUI>(HP.UI->GetWidget());
+	CastBar = Cast<UGageUI>(Charge.UI->GetWidget());
+
+	if (USkeletalMeshComponent* Ptr = GetMesh()) {
 		if (UDataTable* Table = LoadObject<UDataTable>(nullptr, _T("/Game/Data/Tables/Characters.Characters"))) {
 			FCharacterData* Row;
 			
@@ -98,7 +118,19 @@ void AGenericCharacter::Initialize()
 			if (Row->AnimationAttack) {
 				AttackMotion = Row->AnimationAttack;
 			}
-			else AttackMotion = LoadObject<UAnimMontage>(nullptr, _T("/Game/Animations/AM_Default_Cast.AM_Default_Attck"));
+			else AttackMotion = LoadObject<UAnimMontage>(nullptr, _T("/Game/Animations/AM_Default_Attack.AM_Default_Attack"));
+
+			// 피격 모션
+			if (Row->AnimationHit) {
+				HitMotion = Row->AnimationHit;
+			}
+			else HitMotion = LoadObject<UAnimMontage>(nullptr, _T("/Game/Animations/AM_Default_Hit.AM_Default_Hit"));
+
+			// 사망 모션
+			if (Row->AnimationDead) {
+				DeadMotion = Row->AnimationDead;
+			}
+			else DeadMotion = LoadObject<UAnimMontage>(nullptr, _T("/Game/Animations/AM_Default_Dead.AM_Default_Dead"));
 
 			// get skill list
 			int Loop = Row->UseableSkillList.Num();
@@ -107,12 +139,11 @@ void AGenericCharacter::Initialize()
 			for (int i = 0; i < Loop; ++i) {
 				int SkillLevel = 1; // 임시
 
+				// 데이터 가져옴: Hashmap 인덱스 용도
 				SkillTable[i] = Row->UseableSkillList[i]->GetDefaultObject<USkillData>();
-
-				SkillList.Add(SkillTable[i], {});
-				SkillList[SkillTable[i]].Level = SkillLevel;
-				SkillList[SkillTable[i]].Data  = SkillTable[i];
-				SkillList[SkillTable[i]].Info  = SkillTable[i]->Calculate(Level);
+				
+				SkillList.Add(SkillTable[i], NewObject<UGenericSkill>(this)); // 실제 사용할 스킬
+				SkillList[SkillTable[i]]->SetData(SkillTable[i], SkillLevel); // 내부적으로 계산됨
 			}
 
 			int CharacterLevel = 1; // 임시
@@ -122,15 +153,30 @@ void AGenericCharacter::Initialize()
 			HP.Value = Current.HP;
 			MP.Value = Current.MP;
 			SP.Value = Current.SP;
+
+			RootComponent->SetWorldScale3D(Row->Scale);
 		}
 	}
-	DeadMotion = LoadObject<UAnimMontage>(nullptr, _T("/Game/Animations/AM_Default_Dead.AM_Default_Dead"));
+}
 
-	PrimaryActorTick.bCanEverTick = true;
-	bUseControllerRotationYaw = false;
+void AGenericCharacter::OnHit(AGenericCharacter* InHiter)
+{
+	if (IsDead) {
+		return;
+	}
 
-	HPBar   = Cast<UGageUI>(HP.UI->GetWidget());
-	CastBar = Cast<UGageUI>(Charge.UI->GetWidget());
+	static const FName LIST[] = {
+		_T("Hit_0"),
+		_T("Hit_1"),
+	};
+	
+	// 몽타주 실행중이 아닐 때
+	if (!AnimationBase->IsAnyMontagePlaying()) {
+		// 몽타주 재생
+		AnimationBase->Montage_Play(HitMotion);
+		// 랜덤
+		AnimationBase->Montage_JumpToSection(LIST[FMath::Rand() & 0b1], HitMotion);
+	}
 }
 
 auto AGenericCharacter::GetType() const -> ETargetType
@@ -176,7 +222,6 @@ void AGenericCharacter::Dead()
 		IsDead       = true;
 		IsIgnore     = true;
 
-
 		static const FName LIST[] = {
 			_T("Dead_0"),
 			_T("Dead_1"),
@@ -184,17 +229,34 @@ void AGenericCharacter::Dead()
 			_T("Dead_3"),
 		};
 
+		// Hit 몽타주 끄기
+		if (AnimationBase->Montage_IsPlaying(HitMotion)) {
+			AnimationBase->Montage_Stop(0.0f, HitMotion);
+		}
+
 		// 몽타주 재생
 		AnimationBase->Montage_Play(DeadMotion);
 		// 랜덤
-		AnimationBase->Montage_JumpToSection(LIST[FMath::Rand() & 0b11], DeadMotion);
+		int Count = DeadMotion->CompositeSections.Num();
+		AnimationBase->Montage_JumpToSection(LIST[FMath::Rand() % Count], DeadMotion);
+
+		// 스킬 캔슬
+		Act.Cancel();
+		// 스킬 충전이 완료된 채 중지되어 실행도 캔슬도 되지 않는 상황이 있을 수 있어
+		// 강제로 UI를 종료합니다.
+		CastBar->Hide();
 
 		// 무브먼트 종료
 		GetCharacterMovement()->DisableMovement();
 	}
 }
 
-bool AGenericCharacter::Damage(const FSkillInfo& InSkillInfo, AGenericCharacter* InOther, bool UseCritical)
+void AGenericCharacter::View(const FVector& InTarget)
+{
+	SetActorRotation(CUtil::RemoveZ((InTarget - GetActorLocation())).GetSafeNormal().Rotation());
+}
+
+bool AGenericCharacter::Damage(UGenericSkill* InSkill, AGenericCharacter* InOther, bool UseCritical)
 {
 	if (!InOther) return false;
 
@@ -206,7 +268,7 @@ bool AGenericCharacter::Damage(const FSkillInfo& InSkillInfo, AGenericCharacter*
 	}
 		
 	// 데미지 공식: 임시
-	float Power = GetPower() * Ciritical * InSkillInfo.Power;
+	float Power = GetPower() * Ciritical * InSkill->Info.Power;
 	float Resistance = InOther->GetResistance();
 	if (Resistance) {
 		Power /= Resistance;
@@ -275,10 +337,19 @@ void AGenericCharacter::MoveAuto()
 	AddMovementInput(GetActorForwardVector());
 }
 
+void AGenericCharacter::ToggleAutoMove()
+{
+	// 자동이동 끄고 켜기
+	IsAutoMove = !IsAutoMove;
+	if (IsAutoMove) {
+		StartAutoMove();
+	}
+}
+
 void AGenericCharacter::StartTargetMove(const FVector& InTarget)
 {
-	// 이동중이면 무시
-	if (IsInputMove) {
+	// 죽어있거나 이동중이면 무시
+	if (IsDead || IsInputMove) {
 		return;
 	}
 	IsAutoMove   = false;
@@ -321,6 +392,10 @@ void AGenericCharacter::StartInputMove(const FVector2d& InInputVector, bool InFl
 
 void AGenericCharacter::StartAutoMove()
 { 
+	// 플레이어만 사용되는 메소드입니다.
+	// 이동시 스킬 캔슬
+	Act.Cancel();
+
 	// 입력으로 중이면 무시합니다.
 	if (IsInputMove || IsMouseMove) {
 		return;
@@ -331,6 +406,14 @@ void AGenericCharacter::StartAutoMove()
 
 void AGenericCharacter::StartMouseMove()
 {
+	// 플레이어만 사용되는 메소드입니다.
+	// 이동시 스킬 캔슬
+	Act.Cancel();
+
+	if (IsDead) {
+		return;
+	}
+
 	IsMouseMove  = true;
 	IsAutoMove   = false; // 자동 이동 종료
 	IsTargetMove = false; // 타겟 이동 종료
@@ -346,7 +429,7 @@ int AGenericCharacter::PlayAnimationDead(int InMontageSectionIndex)
 	return 0;
 }
 
-auto AGenericCharacter::GetSkillInfo(USkillData* Find)->Skill
+UGenericSkill* AGenericCharacter::GetSkillInfo(USkillData* Find)
 {
 	return SkillList[Find];
 }
@@ -358,7 +441,8 @@ bool AGenericCharacter::IsLive() const
 
 bool AGenericCharacter::IsMoving() const
 {
-	return (IsAutoMove || IsInputMove || IsTargetMove || IsMouseMove);
+	// return IsAutoMove || IsInputMove || IsTargetMove || IsMouseMove;
+	return GetMovementComponent()->Velocity.SquaredLength() != 0;
 }
 
 bool AGenericCharacter::IsMovingStraight() const

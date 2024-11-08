@@ -3,16 +3,28 @@
 
 #include "GenericEffect.h"
 #include "Components/MeshComponent.h"   
+#include "Components/SphereComponent.h"
 #include "Materials/MaterialInterface.h"
 
 #include <LWE_WOW/Generic/GenericCharacter.h>
+#include <LWE_WOW/Generic/GenericSkill.h>
 
 
 AGenericEffect::AGenericEffect()
 {
 	PrimaryActorTick.bCanEverTick = true;
-    m_Mesh        = CreateDefaultSubobject<UStaticMeshComponent>(_T("Mesh"));
-    RootComponent = m_Mesh;
+    m_Mesh = CreateDefaultSubobject<UStaticMeshComponent>(_T("Mesh"));
+    m_Area = CreateDefaultSubobject<USphereComponent>(_T("Area"));
+
+    RootComponent = CreateDefaultSubobject<USceneComponent>(_T("Root"));
+    
+    m_Mesh->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+    m_Area->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+
+    // 플레이어 관련 정보만 켭니다
+    m_Area->SetCollisionObjectType(ECC_ACTOR_SEARCH);
+    m_Area->SetCollisionResponseToAllChannels(ECR_Ignore);
+    m_Area->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 }
 
 void AGenericEffect::BeginPlay()
@@ -22,6 +34,7 @@ void AGenericEffect::BeginPlay()
 
 void AGenericEffect::Tick(float DeltaTime)
 {
+    // LOG(1, "%s", *GetActorRotation().ToString());
 	Super::Tick(DeltaTime);
     if (m_bExecute) {
         Enable(DeltaTime);
@@ -37,112 +50,201 @@ void AGenericEffect::PostActorCreated()
 void AGenericEffect::Shoot(float DeltaTime)
 {
     // 이동할 수 없으면 바로 시전합니다.
-    if (m_Info.Speed == 0) {
+    if (m_Status->Info.Speed == 0) {
+        // 그리고 각도를 캐릭터 정면으로 고정합니다
+        SetActorRotation(m_Parent->GetActorForwardVector().Rotation());
         m_bExecute = true;
     }
 
+    // 소환형 스킬인 경우에도 바로 시전합니다.
+    else if (m_Status->Data->Option & static_cast<uint8>(ESkillFlag::IS_SUMMON)) {
+        SetActorRotation(m_Parent->GetActorForwardVector().Rotation());
+        m_bExecute = true;
+        SetActorLocation(Seeker.End); // 해당 위치로 이동해버립니다.
+    }
+
     else {
-        // 유도 옵션이 켜진 경우
+        // 논타겟팅 스킬이 아니라면
         // 해당 "캐릭터"의 위치를 계속해서 쫓아갑니다
-        if (m_Data->Option & static_cast<int>(ESkillFlag::IS_GUIDED)) {
-            Seeker.SetTarget(m_Target->GetActorLocation());
-            Seeker.View(); // 해당 캐릭터를 바라봅니다.
+        if ((m_Status->Data->Option & static_cast<uint8>(ESkillFlag::IS_GUIDED))) {
+            if (m_Target != nullptr) {
+                Seeker.SetTarget(m_Target->GetActorLocation());
+                Seeker.View(); // 해당 캐릭터를 바라봅니다.
+            }
         }
 
         // 이동 함수입니다.
         Seeker.OnTick();
+        // 회전 속도값 적용 시
+        if (m_Status->Data->RotOpt & static_cast<uint8>(ESkillRotateOption::ROTATE_ON_TICK_SHOOT)) {
+            // 방향을 사이즈로 변환 시켜 쿼터니언 기반으로 회전시킵니다.
+            FQuat QuatRotation = FQuat(m_Status->Data->RotOnTick.GetSafeNormal(), m_Status->Data->RotOnTick.Size() * DeltaTime);
+            m_Mesh->AddRelativeRotation(QuatRotation);
+        }
 
         // 도달했는지 검사합니다.
         if (Seeker.IsAtTarget()) {
             SetActorLocation(Seeker.End); // 해당 위치로 보정합니다.
-
-            // 소환형 스킬이 아닌데 회피 가능한 경우
-            if ((m_Data->Option & static_cast<int>(ESkillFlag::IS_GUIDED)) &&
-                !(m_Data->Option & static_cast<int>(ESkillFlag::IS_SUMMON))) {
-
-                // 목표 위치와 타겟 위치를 제곱으로 계산한 다음 범위 제곱과 비교합니다.
-                if ((Seeker.End - m_Target->GetActorLocation()).SquaredLength() <= (m_Info.Area * m_Info.Area)) {
-                    m_Data->Execute(m_Info, m_Parent, m_Target); // 범위 안이라면 시전합니다.
-                    m_bExecute = true;
-                }
-
-                else {
-                    Destroy(); // 범위 밖이라면 취소합니다. (범위 안 객체 검사 구현 필요)
-                }
+            // 회전 최종값 활성화 돼있다면 해당 회전 값으로 보정합니다.
+            if (m_Status->Data->RotOpt & static_cast<uint8>(ESkillRotateOption::ROTATE_END)) {
+                m_Mesh->SetRelativeRotation(m_Status->Data->RotEndTick); // 보정
             }
-            else {
-                m_Data->Execute(m_Info, m_Parent, m_Target); // 아니면 바로 시전합니다.
-                m_bExecute = true;
-            }
+            SkillMethod(&USkillData::Execute); // 실행
+            m_bExecute = true;
         }
     }
 
     // Duration 없으면 바로 종료합니다.
-    if (m_bExecute && !m_Info.Duration) {
-        m_Data->Final(m_Info, m_Parent, m_Target);
+    if (m_bExecute && !m_Status->Info.Duration) {
+        SkillMethod(&USkillData::Final); // 종료
         Destroy();
     }
 }
 
 void AGenericEffect::Enable(float DeltaTime)
 {
-    m_Interval += DeltaTime;
-    // 틱 있음
-    if (m_Info.Interval) {
-        if (m_Interval >= m_Info.Interval) {
-            m_Duration += m_Info.Interval;
-            m_Interval = 0;
-            m_Data->OnTick(m_Info, m_Parent, m_Target); // 틱 호출
+    // 회전 속도값 적용 시
+    if (m_Status->Data->RotOpt & static_cast<uint8>(ESkillRotateOption::ROTATE_ON_TICK_ENABLE)) {
+        // 방향을 사이즈로 변환 시켜 쿼터니언 기반으로 회전시킵니다.
+        FQuat QuatRotation = FQuat(m_Status->Data->RotOnTick.GetSafeNormal(), m_Status->Data->RotOnTick.Size() * DeltaTime);
+        m_Mesh->AddRelativeRotation(QuatRotation);
+    }
+
+    // 추적 옵션이 켜져있다면
+    if (m_Status->Data->Option & static_cast<uint8>(ESkillFlag::IS_FOLLOW)) {
+        if (m_Target != nullptr) {
+            Seeker.SetTarget(m_Target->GetActorLocation());
+            Seeker.View(); // 해당 캐릭터를 바라봅니다.
+            Seeker.OnTick();
+
+            // 그냥 위치 고정
+            SetActorLocation(m_Target->GetActorLocation());
         }
     }
 
-    if ((m_Duration + m_Interval) > m_Info.Duration) {
-        m_Data->Final(m_Info, m_Parent, m_Target); // 라스트 호출
+    m_Interval += DeltaTime;
+    // 틱 있음
+    if (m_Status->Info.Interval) {
+        if (m_Interval >= m_Status->Info.Interval) {
+            m_Duration += m_Status->Info.Interval;
+            m_Interval = 0;
+            SkillMethod(&USkillData::OnTick); // 실행
+        }
+    }
+
+    // 틱 없으면 바로
+    if ((m_Duration + m_Interval) > m_Status->Info.Duration) {
+        SkillMethod(&USkillData::Final); // 실행
         Destroy();
     }
 }
 
-void AGenericEffect::Spawn(Skill* InSkill, AGenericCharacter* InParent, AGenericCharacter* InTarget)
+void AGenericEffect::SkillMethod(FnSkillMethod MethodName)
+{
+    if (m_Status->Data->Option & static_cast<uint8>(ESkillFlag::IS_NON_TARGET)) {
+        TArray<AActor*> Overlapped;
+        m_Area->GetOverlappingActors(Overlapped);
+        for (AActor* Actor : Overlapped) {
+            if (AGenericCharacter* Character = Cast<AGenericCharacter>(Actor)) {
+                if (Character != m_Parent && !Character->IsDead) {
+                    (m_Status->Data->*MethodName)(m_Status, m_Parent, Character, this);
+                }
+            }
+        }
+    }
+    else (m_Status->Data->*MethodName)(m_Status, m_Parent, m_Target, this);
+}
+
+AGenericEffect* AGenericEffect::Spawn(UGenericSkill* InSkill, AGenericCharacter* InParent, AGenericCharacter* InTarget)
+{
+    // 위치 지정 없을 시 액터 앞에 소환됩니다.
+    return Spawn(InSkill, InParent, InTarget, InParent->GetActorLocation() + InParent->GetActorForwardVector() * 100);
+}
+
+AGenericEffect* AGenericEffect::Spawn(UGenericSkill* InSkill, AGenericCharacter* InParent, AGenericCharacter* InTarget, const FVector& InPos)
+{
+    AGenericEffect* Spawned = Spawn(InSkill->Data, InParent, InPos);
+    if (Spawned) {
+        Spawned->m_Status = InSkill;
+        Spawned->Initialize(InSkill->Data, InSkill->Level, *InSkill->GetName(), InParent, InTarget, InPos);
+    }
+    return Spawned;
+}
+
+AGenericEffect* AGenericEffect::Spawn(USkillData* InSkillData, int InLevel, const TCHAR* const InName, 
+    AGenericCharacter* InParent, AGenericCharacter* InTarget, const FVector& InPos)
+{
+    AGenericEffect* Spawned = Spawn(InSkillData, InParent, InPos);
+    if (Spawned) {
+        Spawned->m_Status = NewObject<UGenericSkill>(Spawned, InName);
+        Spawned->m_Status->SetData(InSkillData, InLevel);
+        Spawned->Initialize(InSkillData, InLevel, InName, InParent, InTarget, InPos);
+    }
+    return Spawned;
+}
+
+AGenericEffect* AGenericEffect::Spawn(USkillData* InSkillData, AGenericCharacter* InParent, const FVector& InLocation)
 {
     UWorld* World = InParent->GetWorld();
     if (!World) {
-        return;
+        return nullptr;
     }
 
     FActorSpawnParameters Param;
     Param.SpawnCollisionHandlingOverride =
-        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn; 
+        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-    FVector  Location = InParent->GetActorLocation() + (InParent->GetActorForwardVector() * 100); // 조금 앞에서 소환됩니다
     FRotator Rotation = InParent->GetActorRotation();
+    FVector  Location = InLocation; // 지정된 위치에 소환됩니다.
 
     AGenericEffect* Spawned =
         World->SpawnActor<AGenericEffect>(StaticClass(), Location, Rotation, Param);
 
     Spawned->Owner = Spawned;
-    Spawned->m_Mesh->SetStaticMesh(InSkill->Data->Mesh);
+    Spawned->m_Mesh->SetStaticMesh(InSkillData->Mesh);
     if (!Spawned->m_Mesh) {
-        return;
+        return nullptr;
     }
+    Spawned->m_Mesh->AddLocalRotation(InSkillData->Rotation);
 
     // 적용할 머테리얼 수 / 필요한 머테리얼 수 비교
-    int Loop = FMath::Min(InSkill->Data->Material.Num(), Spawned->m_Mesh->GetNumMaterials());
+    int Loop = FMath::Min(InSkillData->Material.Num(), Spawned->m_Mesh->GetNumMaterials());
     for (int i = 0; i < Loop; ++i) {
-        UMaterialInterface* MaterialToSet = InSkill->Data->Material[i];
+        UMaterialInterface* MaterialToSet = InSkillData->Material[i];
         if (MaterialToSet) {
             Spawned->m_Mesh->SetMaterial(i, MaterialToSet);
         }
     }
 
-    Spawned->m_Info   = InSkill->Info;
-    Spawned->m_Data   = InSkill->Data;
-    Spawned->m_Parent = InParent;
-    Spawned->m_Target = InTarget;
+    return Spawned;
+}
 
-    Spawned->m_Mesh->SetCollisionProfileName(TEXT("NoCollision"));
-    Spawned->m_Mesh->SetWorldScale3D({ Spawned->m_Info.Scale, Spawned->m_Info.Scale, Spawned->m_Info.Scale });
+void AGenericEffect::Initialize(USkillData* InData, int InLevel, const TCHAR* const InName,
+    AGenericCharacter* InParent, AGenericCharacter* InTarget, const FVector& InLocation)
+{
+    check(m_Status);
 
-    Spawned->Seeker.Setting(InParent);
-    Spawned->Seeker.SetSpeed(Spawned->m_Info.Speed);
-    Spawned->Seeker.View(); // 해당 방향 보도록 회전
+    m_Parent = InParent;
+    m_Target = InTarget;
+
+    FSkillInfo* InfoRef = &m_Status->Info;
+
+    m_Mesh->SetCollisionProfileName(TEXT("NoCollision"));
+    m_Mesh->SetWorldScale3D({ InfoRef->Scale, InfoRef->Scale, InfoRef->Scale });
+    m_Mesh->SetRelativeRotation(InData->Rotation);
+
+    // Non Target이라면
+    if ((InData->Option & static_cast<uint8>(ESkillFlag::IS_NON_TARGET))) {
+        // 현재 위치에서 전방 벡터 사거리 까지
+        Seeker.Setting(InLocation, GetActorForwardVector() * InfoRef->Range);
+
+        // 공격 영역 세팅
+        m_Area->SetWorldScale3D({ InfoRef->Area, InfoRef->Area, InfoRef->Area });
+    }
+
+    // Parent의 Target이 자동으로 세팅됩니다.
+    else Seeker.Setting(InParent);
+
+    Seeker.SetSpeed(InfoRef->Speed);
+    Seeker.View(); // 해당 방향 보도록 회전
 }

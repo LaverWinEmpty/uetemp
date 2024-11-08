@@ -16,6 +16,9 @@ class LWE_WOW_API ALobbyCharacter : public AGenericCharacter
 public:
 	ALobbyCharacter();
 
+public:
+	virtual void Initialize() override;
+
 protected:
 	virtual void BeginPlay() override;
 

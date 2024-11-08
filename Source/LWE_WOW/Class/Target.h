@@ -3,6 +3,8 @@
 #include <LWE_WOW/Interface/Interactable.h>
 #include <LWE_WOW/Common/Constants.h>
 
+class AGenericCharacter;
+
 class LWE_WOW_API CTarget {
 public:
 	CTarget(IInteractable* Parent);
@@ -12,13 +14,18 @@ public:
 	void Unsetting();             // nullptr 초기화
 
 	IInteractable* Get();
-	AActor*        GetTargettingActor();
 	ERelationType  GetRelation() const;
+
+	bool IsSelf() const;
 
 	operator bool();
 
+	template<typename T> T* Get() {
+		return Cast<T>(m_Other);
+	}
+
 private:
-	IInteractable* This;
-	IInteractable* Other;
-	ERelationType  Relation;
+	IInteractable* m_This;
+	IInteractable* m_Other;
+	ERelationType  m_Relation;
 };

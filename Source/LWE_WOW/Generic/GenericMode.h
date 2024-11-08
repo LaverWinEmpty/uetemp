@@ -7,6 +7,8 @@
 
 #include "GenericMode.generated.h"
 
+class AGenericCharacter;
+
 /**
  * 
  */
@@ -23,4 +25,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Camera"); float CameraRangeVertical   = 120;
 	UPROPERTY(EditAnywhere, Category = "Camera"); float ZoomMin               = 0;
 	UPROPERTY(EditAnywhere, Category = "Camera"); float ZoomMax               = 1000;
+
+public:
+	TArray<AGenericCharacter*> Characters;
 };

@@ -46,6 +46,9 @@ private:
 	TObjectPtr<USpringArmComponent> m_ArmComponent;
 	TObjectPtr<UCameraComponent>    m_CameraComponent;
 
+public:
+	const float& ZoomValue = m_Zoom;
+
 private:
 	float m_Zoom = CDefault::DefVal::CAMERA_ZOOM;
 

@@ -4,6 +4,7 @@
 #include "Skill_Fireball.h"
 
 #include <LWE_WOW/Generic/GenericCharacter.h>
+#include <LWE_WOW/Generic/GenericEffect.h>
 
 USkillFireball::USkillFireball() : USkillData()
 {
@@ -25,15 +26,17 @@ USkillFireball::USkillFireball() : USkillData()
 	);
 }
 
-void USkillFireball::Execute(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillFireball::Execute(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
 }
 
-void USkillFireball::Final(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillFireball::Final(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
 }
 
-void USkillFireball::OnTick(const FSkillInfo& In, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
+void USkillFireball::OnTick(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
+	Super::OnTick(In, InCaster, InTarget, InActor);
+
 	InCaster->Damage(In, InTarget);
 }

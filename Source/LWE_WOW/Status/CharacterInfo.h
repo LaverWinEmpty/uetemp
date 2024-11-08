@@ -79,5 +79,5 @@ public:
 	
 	// 직업 유형
 	UPROPERTY(BlueprintReadWrite, Category = "Information")
-	EClassCode ClassType;     
+	EClassCode ClassType;
 };
