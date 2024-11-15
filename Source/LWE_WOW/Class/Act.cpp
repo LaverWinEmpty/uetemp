@@ -49,12 +49,17 @@ auto CAct::Start(UGenericSkill* InSkill)->EResult
 	// 타겟이 없는데 스킬 사용 시
 	if (!m_Parent->Target) {
 		// 자신에게 스킬 옵션이 켜져있지 않다면
-		if ((Flag & ESkillFlag::IS_CAN_SELF) != ESkillFlag::NONE) {
+		if ((Flag & ESkillFlag::IS_USE_SELF) != ESkillFlag::NONE) {
 			m_Target = m_Parent; // 자기 자신을 타겟
 		}
 	}
 	else m_Target = Cast<AGenericCharacter>(m_Parent->Target.Get());
 
+
+	// 죽은 상태에서 사용
+	if (m_Parent->IsDead) {
+		return ACT_DIED;
+	}
 
 	// 쿨타임
 	if (InSkill->Cooldown != 0) {
@@ -135,8 +140,8 @@ void CAct::OnTick(float DeltaTime)
 		}
 		else Anim = m_Parent->AttackMotion; // 아니면 기본 모션 사용
 
-		// 시전 시 
-		if (m_Target) {
+		// 시전 시, 시야제한 있고 타겟 있으면 타겟을 향해 시선 변경
+		if ((m_Current->Data->Option & static_cast<uint8>(ESkillFlag::LIMIT_VIEW)) && m_Target) {
 			m_Parent->View(m_Target->GetActorLocation());
 		}
 

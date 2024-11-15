@@ -34,7 +34,7 @@ public:
         TriggerBox->SetBoxExtent({ 200, 200, 200 });
 
         // 콜리곤 설정
-        TriggerBox->SetCollisionObjectType(ECC_ACTOR_SEARCH);
+        TriggerBox->SetCollisionObjectType(ECC_ACTOR_FINDER);
         TriggerBox->SetCollisionResponseToAllChannels(ECR_Ignore);
         TriggerBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
     }

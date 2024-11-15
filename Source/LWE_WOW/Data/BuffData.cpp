@@ -30,17 +30,8 @@ FBuffInfo UBuffData::Calculate(int InLevel) const
 	return Info;
 }
 
-void UBuffData::OnBegin(AGenericCharacter* InTarget) const
-{
-	// Pure
-}
+void UBuffData::OnBegin(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const { /* Pure */ }
 
-void UBuffData::OnTick(AGenericCharacter* InTarget) const
-{
-	// Pure
-}
+void UBuffData::OnTick(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const { /* Pure */ }
 
-void UBuffData::OnEnd(AGenericCharacter* InTarget) const
-{
-	// Pure
-}
+void UBuffData::OnEnd(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const { /* Pure */ }

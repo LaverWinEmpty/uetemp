@@ -23,6 +23,10 @@
 	else          { UE_LOG(LogTemp, Error, _T(Format), ##__VA_ARGS__); }\
 } while(false)
 
+#define PRINT(x) do {\
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(_T("%s"), *((x)->ToString()))); \
+ } while(false)
+
 
 /**
  * 

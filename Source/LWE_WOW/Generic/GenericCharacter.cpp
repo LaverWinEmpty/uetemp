@@ -6,12 +6,10 @@
 
 #include <LWE_WOW/Common/Util.h>
 #include <LWE_WOW/Common/Constants.h>
-#include <LWE_WOW/Data/CharacterData.h>
 #include <LWE_WOW/Generic/GenericEffect.h>
 #include <LWE_WOW/Generic/GenericSkill.h>
 #include <LWE_WOW/Manager/UIManager.h>
 #include <LWE_WOW/UI/GageUI.h>
-
 
 AGenericCharacter::AGenericCharacter()
 {
@@ -95,6 +93,13 @@ void AGenericCharacter::Initialize()
 				check(Row);
 			}
 
+			// 스킬을 Load 한 후 해당 스킬들을 등록합니다.
+			int Loop = Row->UseableSkillList.Num();
+			UseableSkillList.Init(nullptr, Loop);
+			for (int i = 0; i < Loop; ++i) {
+				UseableSkillList[i] = Cast<USkillData>(Row->UseableSkillList[i]->GetDefaultObject());
+			}
+
 			// get mesh
 			if (Row->Mesh) {
 				Ptr->SetSkeletalMesh(Row->Mesh);
@@ -132,22 +137,11 @@ void AGenericCharacter::Initialize()
 			}
 			else DeadMotion = LoadObject<UAnimMontage>(nullptr, _T("/Game/Animations/AM_Default_Dead.AM_Default_Dead"));
 
-			// get skill list
-			int Loop = Row->UseableSkillList.Num();
-
-			SkillTable.Init(nullptr, Loop);
-			for (int i = 0; i < Loop; ++i) {
-				int SkillLevel = 1; // 임시
-
-				// 데이터 가져옴: Hashmap 인덱스 용도
-				SkillTable[i] = Row->UseableSkillList[i]->GetDefaultObject<USkillData>();
-				
-				SkillList.Add(SkillTable[i], NewObject<UGenericSkill>(this)); // 실제 사용할 스킬
-				SkillList[SkillTable[i]]->SetData(SkillTable[i], SkillLevel); // 내부적으로 계산됨
-			}
+			// 직업 정보
+			ClassType = Row->ClassType;
 
 			int CharacterLevel = 1; // 임시
-			Source = Row->Default;
+			Source  = Row->Default;
 			Current = Row->Default;
 
 			HP.Value = Current.HP;
@@ -201,7 +195,7 @@ void AGenericCharacter::OnTargetting()
 
 float AGenericCharacter::GetPower() const
 {
-	return Current.Attck;
+	return Current.Attack;
 }
 
 float AGenericCharacter::GetResistance() const
@@ -258,6 +252,11 @@ void AGenericCharacter::View(const FVector& InTarget)
 
 bool AGenericCharacter::Damage(UGenericSkill* InSkill, AGenericCharacter* InOther, bool UseCritical)
 {
+	return Damage(InSkill->Info.Power, InOther, UseCritical);
+}
+
+bool AGenericCharacter::Damage(float InDamage, AGenericCharacter* InOther, bool UseCritical)
+{
 	if (!InOther) return false;
 
 	float Ciritical = 1;
@@ -266,9 +265,9 @@ bool AGenericCharacter::Damage(UGenericSkill* InSkill, AGenericCharacter* InOthe
 			Ciritical = Current.CriticalMulit * 0.01;
 		}
 	}
-		
+
 	// 데미지 공식: 임시
-	float Power = GetPower() * Ciritical * InSkill->Info.Power;
+	float Power = GetPower() * Ciritical * InDamage;
 	float Resistance = InOther->GetResistance();
 	if (Resistance) {
 		Power /= Resistance;
@@ -279,9 +278,15 @@ bool AGenericCharacter::Damage(UGenericSkill* InSkill, AGenericCharacter* InOthe
 		InOther->HP.Value = 0;
 		InOther->Dead();
 	}
-	
+
 	InOther->HPBar->Update(InOther->HP.Value, InOther->Current.HP, 3);
 	return true;
+}
+
+void AGenericCharacter::UpdateStatus()
+{
+	Current = Source;
+	// 기타 버프 구현해야됨
 }
 
 void AGenericCharacter::MoveTick()
@@ -432,6 +437,28 @@ int AGenericCharacter::PlayAnimationDead(int InMontageSectionIndex)
 UGenericSkill* AGenericCharacter::GetSkillInfo(USkillData* Find)
 {
 	return SkillList[Find];
+}
+
+void AGenericCharacter::AddPattern(USkillData* InData, int InLevel)
+{
+	SkillList.Add(InData, NewObject<UGenericSkill>(this));
+	// 생성한 객체에 데이터 기반으로 계수 계산
+	SkillList[InData]->SetData(InData, InLevel);
+}
+
+void AGenericCharacter::LearnSkill(UGenericSkill* InSkill)
+{
+	if (SkillList.Find(InSkill->Data)) {
+		SkillList[InSkill->Data]->SetLevel(InSkill->Level); // 레벨만 다시 계산합니다.
+	}
+	SkillList.Add(InSkill->Data, InSkill); // 해당 스킬을 배웁니다.
+}
+
+void AGenericCharacter::RemoveSkill(USkillData* InData)
+{
+	if (SkillList.Find(InData)) {
+		SkillList.Remove(InData); // 지웁니다.
+	}
 }
 
 bool AGenericCharacter::IsLive() const

@@ -22,7 +22,7 @@ AGenericEffect::AGenericEffect()
     m_Area->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
     // 플레이어 관련 정보만 켭니다
-    m_Area->SetCollisionObjectType(ECC_ACTOR_SEARCH);
+    m_Area->SetCollisionObjectType(ECC_ACTOR_FINDER);
     m_Area->SetCollisionResponseToAllChannels(ECR_Ignore);
     m_Area->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 }
@@ -75,6 +75,11 @@ void AGenericEffect::Shoot(float DeltaTime)
 
         // 이동 함수입니다.
         Seeker.OnTick();
+        // 논타겟 투척 스킬이라면
+        if (m_Status->Info.Speed != 0 &&(m_Status->Data->Option & static_cast<uint8>(ESkillFlag::IS_NON_TARGET))) {
+            SkillMethod(&USkillData::OnTick); // Tick이 여기에서 실행됩니다.
+        }
+
         // 회전 속도값 적용 시
         if (m_Status->Data->RotOpt & static_cast<uint8>(ESkillRotateOption::ROTATE_ON_TICK_SHOOT)) {
             // 방향을 사이즈로 변환 시켜 쿼터니언 기반으로 회전시킵니다.
@@ -103,6 +108,10 @@ void AGenericEffect::Shoot(float DeltaTime)
 
 void AGenericEffect::Enable(float DeltaTime)
 {
+    if (!m_Status || !m_Status->IsA<UGenericSkill>() || !IsValid(m_Status) || !m_Status->Data) {
+        check(false);
+    }
+
     // 회전 속도값 적용 시
     if (m_Status->Data->RotOpt & static_cast<uint8>(ESkillRotateOption::ROTATE_ON_TICK_ENABLE)) {
         // 방향을 사이즈로 변환 시켜 쿼터니언 기반으로 회전시킵니다.
@@ -146,12 +155,18 @@ void AGenericEffect::SkillMethod(FnSkillMethod MethodName)
         m_Area->GetOverlappingActors(Overlapped);
         for (AActor* Actor : Overlapped) {
             if (AGenericCharacter* Character = Cast<AGenericCharacter>(Actor)) {
-                if (Character != m_Parent && !Character->IsDead) {
+                // 죽은 경우
+                if (Character->IsDead && !(m_Status->Data->Option & static_cast<uint8>(ESkillFlag::IS_CAN_DEAD))) 
+                    continue;
+                // Call
+                if (m_Status->Data->Target & static_cast<uint8>(m_Parent->GetRelation(Character)))
                     (m_Status->Data->*MethodName)(m_Status, m_Parent, Character, this);
-                }
-            }
-        }
-    }
+
+            } // end if
+        } // end for
+    } // end if
+
+    // 타겟팅은 시전 중 검증됩니다.
     else (m_Status->Data->*MethodName)(m_Status, m_Parent, m_Target, this);
 }
 
@@ -236,13 +251,16 @@ void AGenericEffect::Initialize(USkillData* InData, int InLevel, const TCHAR* co
     // Non Target이라면
     if ((InData->Option & static_cast<uint8>(ESkillFlag::IS_NON_TARGET))) {
         // 현재 위치에서 전방 벡터 사거리 까지
-        Seeker.Setting(InLocation, GetActorForwardVector() * InfoRef->Range);
+        Seeker.Setting(InLocation, InLocation + GetActorForwardVector() * InfoRef->Range);
 
         // 공격 영역 세팅
         m_Area->SetWorldScale3D({ InfoRef->Area, InfoRef->Area, InfoRef->Area });
+#if WITH_EDITOR
+        m_Area->bHiddenInGame = false;
+#endif
     }
 
-    // Parent의 Target이 자동으로 세팅됩니다.
+        // Parent의 Target이 자동으로 세팅됩니다.
     else Seeker.Setting(InParent);
 
     Seeker.SetSpeed(InfoRef->Speed);

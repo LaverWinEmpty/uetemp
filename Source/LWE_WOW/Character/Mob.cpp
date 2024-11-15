@@ -4,6 +4,7 @@
 #include "Mob.h"
 
 #include <LWE_WOW/Generic/GenericSkill.h>
+#include <LWE_WOW/Data/CharacterData.h>
 
 AMob::AMob()
 {
@@ -11,7 +12,7 @@ AMob::AMob()
 	Finder->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
 	// 플레이어 관련 정보만 켭니다
-	Finder->SetCollisionObjectType(ECC_ACTOR_SEARCH);
+	Finder->SetCollisionObjectType(ECC_ACTOR_FINDER);
 	Finder->SetCollisionResponseToAllChannels(ECR_Ignore);
 	Finder->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 }
@@ -234,6 +235,10 @@ UGenericSkill* AMob::SelectSkill()
 
 	UGenericSkill* Ret = nullptr;
 
+	// 키 -> Indexing
+	TArray<USkillData*> SkillTable;
+	SkillList.GetKeys(SkillTable);
+
 	// 쿨타임이라면 다음 스킬을 찾습니다.
 	for (int i = Index; i < SkillCount; ++i) {
 		UGenericSkill* Temp = SkillList[SkillTable[i]];
@@ -256,4 +261,15 @@ UGenericSkill* AMob::SelectSkill()
 
 	// Not found
 	return Ret;
+}
+
+void AMob::Initialize()
+{
+	Super::Initialize();
+
+	// get skill list
+	int Loop = UseableSkillList.Num();
+	for (int i = 0; i < Loop; ++i) {
+		AddPattern(UseableSkillList[i], 1);
+	}
 }

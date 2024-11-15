@@ -30,12 +30,12 @@ enum class ESkillFlag : uint8 {
 	IS_GUIDED     = 1 << 2 UMETA(DisplayName = "Guided"),
 	// 발사하고난 후 (비주얼적으로) 달라붙습니다.
 	IS_FOLLOW     = 1 << 3 UMETA(DisplayName = "Follow"),
-	// 논타겟 스킬입니다.
+	// 논타겟 스킬입니다. 발사체인 경우 Shoot 중 Tick이 발생하게 됩니다.
 	IS_NON_TARGET = 1 << 4 UMETA(DisplayName = "Non-target"),
 	// 소환형 스킬입니다.
 	IS_SUMMON     = 1 << 5 UMETA(DisplayName = "Summon"),
-	// 자기 자신에게 사용 가능합니다.
-	IS_CAN_SELF   = 1 << 6 UMETA(DisplayName = "Can Self"),
+	// 자기 자신에게 사용됩니다.
+	IS_USE_SELF   = 1 << 6 UMETA(DisplayName = "Can Self"),
 	// 죽은 상대에게 사용 가능합니다.
 	IS_CAN_DEAD   = 1 << 7 UMETA(DisplayName = "Can Dead"),
 };
@@ -66,7 +66,11 @@ public:
 	/*
 		Execute: 스킬 시작 직후 발생하는 효과입니다.
 		Final:   스킬 종료 직전 발생하는 효과입니다.
-		OnTikcl: 스킬 시작 ~ 종료 사이 틱마다 발동하는 효과입니다.
+		OnTick:  스킬 시작 ~ 종료 사이 틱마다 발동하는 효과입니다.
+
+		단 Non-Target 스킬에 속도 값이 존재하면 투척 중 피격되는 스킬로 취급됩니다.
+		이 경우 OnTick -> Execute -> OnTick -> Final 순으로 실행됩니다.
+		Duration을 0으로 두면 2번째 OnTick은 무시할 수 있습니다.
 
 		스킬(Effect)이 Spawn되면 목표를 향해 이동하거나, 설치하는 등의 효과가 발생합니다.
 		그 이후 Execute가 호출됩니다.
@@ -171,5 +175,7 @@ public:
 public:
 	virtual FSkillInfo Calculate(int InLevel)                 const;
 	int                AdjustLevel(int InLevel)               const;
-	void               ApplyBuff(AGenericCharacter* InTarget) const;
+
+protected:
+	void ApplyBuff(AGenericCharacter* InCaster, AGenericCharacter* InTarget, int Level) const;
 };

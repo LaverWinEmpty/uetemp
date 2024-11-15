@@ -3,6 +3,7 @@
 #include "Skill_Slash.h"
 
 #include <LWE_WOW/Generic/GenericCharacter.h>
+#include <LWE_WOW/Generic/GenericEffect.h>
 
 USkillSlash::USkillSlash() : USkillData()
 {
@@ -14,11 +15,6 @@ USkillSlash::USkillSlash() : USkillData()
 	Default.Interval = 0.2; // 공격시간
 
 	Target = static_cast<uint8>(ERelationType::HARM);
-
-	// 옵션:  시야 내 객체만 가능
-	Option = static_cast<uint8>(
-		ESkillFlag::LIMIT_VIEW 
-	);
 }
 
 void USkillSlash::Execute(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
@@ -32,7 +28,5 @@ void USkillSlash::Final(UGenericSkill* In, AGenericCharacter* InCaster, AGeneric
 void USkillSlash::OnTick(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
 	Super::OnTick(In, InCaster, InTarget, InActor);
-
 	InCaster->Damage(In, InTarget);
-	ApplyBuff(InTarget);
 }

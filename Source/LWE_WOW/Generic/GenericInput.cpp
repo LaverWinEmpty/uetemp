@@ -9,6 +9,7 @@
 #include <LWE_WOW/Generic/GenericSkill.h>
 #include <LWE_WOW/Manager/UIManager.h>
 #include <LWE_WOW/Manager/PlayerManager.h>
+#include <LWE_WOW/UI/QuickSlotUI.h>
 
 AGenericInput::AGenericInput()
 {
@@ -18,11 +19,18 @@ AGenericInput::~AGenericInput() {}
 
 void AGenericInput::Initialize(UEnhancedInputComponent* InEIC)
 {
+	// 기본 기능들
 	InEIC->BindAction(m_IA[IA_LOOK], ETriggerEvent::Triggered, this, &AGenericInput::OnInput<FVector2d>);
 	InEIC->BindAction(m_IA[IA_ZOOM], ETriggerEvent::Triggered, this, &AGenericInput::OnInput<float>);
-	InEIC->BindAction(m_IA[IA_JUMP], ETriggerEvent::Started, this, &AGenericInput::OnInput<bool>);
-	InEIC->BindAction(m_IA[IA_AUTO], ETriggerEvent::Started, this, &AGenericInput::OnInput<bool>);
+	InEIC->BindAction(m_IA[IA_JUMP], ETriggerEvent::Started,   this, &AGenericInput::OnInput<bool>);
+	InEIC->BindAction(m_IA[IA_AUTO], ETriggerEvent::Started,   this, &AGenericInput::OnInput<bool>);
 
+	// UI 관련
+	InEIC->BindAction(m_IA[IA_UI_TOGGLE_INVENTORY], ETriggerEvent::Started, this, &AGenericInput::OnInput<bool>);
+	InEIC->BindAction(m_IA[IA_UI_TOGGLE_EQUIPMENT], ETriggerEvent::Started, this, &AGenericInput::OnInput<bool>);
+	InEIC->BindAction(m_IA[IA_UI_TOGGLE_SKILL],     ETriggerEvent::Started, this, &AGenericInput::OnInput<bool>);
+
+	// BindAction, bool Started / Completed 묶어서 
 	BindPushKey(InEIC, IA_MOVE_L);
 	BindPushKey(InEIC, IA_MOVE_R);
 	BindPushKey(InEIC, IA_MOVE_F);
@@ -59,20 +67,39 @@ void AGenericInput::Initialize(UEnhancedInputComponent* InEIC)
 	Mapping(IA_AUTO, EKeys::CapsLock);
 
 	// 임시
-	Mapping(IA_COMMAND_0, EKeys::One  );
-	Mapping(IA_COMMAND_1, EKeys::Two  );
-	Mapping(IA_COMMAND_2, EKeys::Three);
-	Mapping(IA_COMMAND_3, EKeys::Four );
-	Mapping(IA_COMMAND_4, EKeys::Five );
-	Mapping(IA_COMMAND_5, EKeys::Six  );
-	Mapping(IA_COMMAND_6, EKeys::Seven);
-	Mapping(IA_COMMAND_7, EKeys::Eight);
-	Mapping(IA_COMMAND_8, EKeys::Nine );
-	Mapping(IA_COMMAND_9, EKeys::Zero );
+	Mapping(IA_COMMAND_0,  EKeys::One   );
+	Mapping(IA_COMMAND_1,  EKeys::Two   );
+	Mapping(IA_COMMAND_2,  EKeys::Three );
+	Mapping(IA_COMMAND_3,  EKeys::Four  );
+	Mapping(IA_COMMAND_4,  EKeys::Five  );
+	Mapping(IA_COMMAND_5,  EKeys::Six   );
+	Mapping(IA_COMMAND_6,  EKeys::Seven );
+	Mapping(IA_COMMAND_7,  EKeys::Eight );
+	Mapping(IA_COMMAND_8,  EKeys::Nine  );
+	Mapping(IA_COMMAND_9,  EKeys::Zero  );
+	Mapping(IA_COMMAND_10, EKeys::Hyphen);
+	Mapping(IA_COMMAND_11, EKeys::Equals);
+	Mapping(IA_COMMAND_12, EKeys::F1    );
+	Mapping(IA_COMMAND_13, EKeys::F2    );
+	Mapping(IA_COMMAND_14, EKeys::F3    );
+	Mapping(IA_COMMAND_15, EKeys::F4    );
+	Mapping(IA_COMMAND_16, EKeys::F5    );
+	Mapping(IA_COMMAND_17, EKeys::F6    );
+	Mapping(IA_COMMAND_18, EKeys::F7    );
+ 	Mapping(IA_COMMAND_19, EKeys::F8    );
+	Mapping(IA_COMMAND_20, EKeys::F9    );
+	Mapping(IA_COMMAND_21, EKeys::F10   );
+	Mapping(IA_COMMAND_22, EKeys::F11   );
+	Mapping(IA_COMMAND_23, EKeys::F12   );
+
+	// UI 매핑
+	Mapping(IA_UI_TOGGLE_INVENTORY, EKeys::I);
+	Mapping(IA_UI_TOGGLE_EQUIPMENT, EKeys::U);
+	Mapping(IA_UI_TOGGLE_SKILL,     EKeys::K);
 
 	// 안전한 생성을 위해 Cleanup -> Setup
 	if (UUIManager* Instance = UUIManager::Instance(this)) {
-		Instance->Reset();
+		Instance->Setup();
 	}
 }
 
@@ -217,22 +244,31 @@ void AGenericInput::OnMouseRightClick(bool InFlag)
 
 void AGenericInput::PlayerAction(EActionID InID)
 {
-	if (m_Player->SkillSlots.Find(InID)) {
-		// 스킬 시전 성공 시
-		CAct::EResult Result = m_Player->Act.Start(m_Player->SkillSlots[InID]);
+	// 단축키에 등록된 스킬을 가져와서 사용합니다.
+	PlayerAction(UUIManager::Instance(this)->GetSkillSlot(InID)->GetSlotInfo(InID));
+}
 
-		if (CAct::IsOK(Result)) {
-			// 시야 제한이 있는 스킬의 경우 스킬을 바라보기 위해 적 방향으로 회전 (타겟이 있는 경우)
-			if ((m_Player->SkillSlots[InID]->Data->Option & static_cast<uint8>(ESkillFlag::LIMIT_VIEW)) && 
-				m_Player->Target && !m_Player->Target.IsSelf()) {
-				// 카메라 고정 적용됨
-				m_Player->View(m_Player->Target.Get<AActor>()->GetActorLocation());
-			}
-		}
+void AGenericInput::PlayerAction(UGenericSkill* InSkill)
+{
+	if (!InSkill) {
+		ERROR(0, "Skill is Nullpointer");
+		return;
+	}
 
-		else {
-			UUIManager::Instance(this)->SetMessageText(CAct::GetMessage(Result));
+	CAct::EResult Result = m_Player->Act.Start(InSkill);
+
+	// 스킬 시전 성공 시
+	if (CAct::IsOK(Result)) {
+		// 시야 제한이 있는 스킬의 경우 스킬을 바라보기 위해 적 방향으로 회전 (타겟이 있는 경우)
+		if ((InSkill->Data->Option & static_cast<uint8>(ESkillFlag::LIMIT_VIEW)) &&
+			m_Player->Target && !m_Player->Target.IsSelf()) {
+			// 카메라 고정 적용됨
+			m_Player->View(m_Player->Target.Get<AActor>()->GetActorLocation());
 		}
+	}
+
+	else {
+		UUIManager::Instance(this)->SetMessageText(CAct::GetMessage(Result));
 	}
 }
 
@@ -363,6 +399,36 @@ bool AGenericInput::PostInput(bool InValue, EActionID InID, ETriggerEvent InType
 	switch (InID) {
 		case IA_MOUSE_L: OnMouseLeftClick(InValue);  break;
 		case IA_MOUSE_R: OnMouseRightClick(InValue); break;
+
+		// 스킬 사용 가능
+		// 죽은 상태면 내부에서 메세지 출력
+		case IA_COMMAND_0:
+		case IA_COMMAND_1:
+		case IA_COMMAND_2:
+		case IA_COMMAND_3:
+		case IA_COMMAND_4:
+		case IA_COMMAND_5:
+		case IA_COMMAND_6:
+		case IA_COMMAND_7:
+		case IA_COMMAND_8:
+		case IA_COMMAND_9:
+		case IA_COMMAND_10:
+		case IA_COMMAND_11:
+		case IA_COMMAND_12:
+		case IA_COMMAND_13:
+		case IA_COMMAND_14:
+		case IA_COMMAND_15:
+		case IA_COMMAND_16:
+		case IA_COMMAND_17:
+		case IA_COMMAND_18:
+		case IA_COMMAND_19:
+			if (InValue)
+				PlayerAction(InID);
+			break;
+
+		case IA_UI_TOGGLE_INVENTORY: UUIManager::Instance(this)->Toggle(UUIManager::UI_INVENTORY); break;
+		case IA_UI_TOGGLE_EQUIPMENT: UUIManager::Instance(this)->Toggle(UUIManager::UI_EQUIPMENT); break;
+		case IA_UI_TOGGLE_SKILL:     UUIManager::Instance(this)->Toggle(UUIManager::UI_SKILL);     break;
 	}
 
 	// 죽어있으면 입력 불가
@@ -381,20 +447,6 @@ bool AGenericInput::PostInput(bool InValue, EActionID InID, ETriggerEvent InType
 		case IA_ALT_L:   CUtil::SetFlag(m_Mod, MOD_SHIFT_L, InValue); break;
 		case IA_CTRL_L:  CUtil::SetFlag(m_Mod, MOD_CTRL_L,  InValue); break;
 		case IA_SHIFT_L: CUtil::SetFlag(m_Mod, MOD_SHIFT_L, InValue); break;
-
-		case IA_COMMAND_0:
-		case IA_COMMAND_1:
-		case IA_COMMAND_2:
-		case IA_COMMAND_3:
-		case IA_COMMAND_4:
-		case IA_COMMAND_5:
-		case IA_COMMAND_6:
-		case IA_COMMAND_7:
-		case IA_COMMAND_8:
-		case IA_COMMAND_9:
-			if(InValue)
-				PlayerAction(InID);
-			break;
 	}
 
 	return true;

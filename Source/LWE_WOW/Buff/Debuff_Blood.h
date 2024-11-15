@@ -16,7 +16,7 @@ class LWE_WOW_API UDebuffBlood : public UBuffData
 	GENERATED_BODY()
 
 public:
-	virtual void OnBegin(AGenericCharacter* InTarget) const;
-	virtual void OnTick(AGenericCharacter* InTarget) const;
-	virtual void OnEnd(AGenericCharacter* InTarget) const;
+	virtual void OnBegin(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
+	virtual void OnTick(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
+	virtual void OnEnd(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
 };

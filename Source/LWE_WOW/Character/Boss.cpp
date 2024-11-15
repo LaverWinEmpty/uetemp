@@ -37,7 +37,7 @@ void ABoss::BeginPlay()
 
 	// 세팅
 	BossArea->SetSphereRadius(BossAreaRadius);
-	BossArea->SetCollisionObjectType(ECC_ACTOR_SEARCH);
+	BossArea->SetCollisionObjectType(ECC_ACTOR_FINDER);
 	BossArea->SetCollisionResponseToAllChannels(ECR_Ignore);
 	BossArea->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	BossArea->RegisterComponent();

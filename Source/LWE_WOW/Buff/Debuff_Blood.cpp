@@ -3,14 +3,17 @@
 
 #include "Debuff_Blood.h"
 
-void UDebuffBlood::OnBegin(AGenericCharacter* InTarget) const
+#include <LWE_WOW/Generic/GenericCharacter.h>
+
+void UDebuffBlood::OnBegin(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
 {
 }
 
-void UDebuffBlood::OnTick(AGenericCharacter* InTarget) const
+void UDebuffBlood::OnTick(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
 {
+	InCaster->Damage(InPower, InTarget, false);
 }
 
-void UDebuffBlood::OnEnd(AGenericCharacter* InTarget) const
+void UDebuffBlood::OnEnd(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const
 {
 }

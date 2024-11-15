@@ -19,7 +19,6 @@ struct LWE_WOW_API FCharacterData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	USkeletalMesh* Mesh;
 
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	FVector MeshLocationAdjust;
 
@@ -58,4 +57,7 @@ struct LWE_WOW_API FCharacterData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
 	FCharacterInfo Coefficient;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
+	EClassCode ClassType;
 };

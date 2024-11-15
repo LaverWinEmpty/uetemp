@@ -7,6 +7,7 @@
 #include <LWE_WOW/Class/Buff.h>
 #include <LWE_WOW/Class/Act.h>
 #include <LWE_WOW/Status/CharacterInfo.h>
+#include <LWE_WOW/Data/CharacterData.h>
 
 #include "CoreMinimal.h"
 #include "InputAction.h"
@@ -70,6 +71,10 @@ public:
 
 public:
 	bool Damage(UGenericSkill* InSkillInfo, AGenericCharacter* InOther, bool UseCritical = true);
+	bool Damage(float InDamage, AGenericCharacter* InOther, bool UseCritical = true);
+
+public:
+	void UpdateStatus();
 
 public:
 	void StartTargetMove(const FVector&);
@@ -83,6 +88,16 @@ public:
 
 public:
 	UGenericSkill* GetSkillInfo(USkillData*);
+
+public:
+	// 스킬을 추가(몹 패턴)할 때 사용합니다.
+	void AddPattern(USkillData* InData, int InLevel);
+
+	// 스킬을 배울 때(즉 이미 계산된 스킬을 가져올 때) 사용합니다.
+	void LearnSkill(UGenericSkill*);
+
+	// 해당 스킬을 지웁니다.
+	void RemoveSkill(USkillData*);
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Movement")
@@ -114,6 +129,9 @@ public:
 	ETeamType Team = ETeamType::NONE;
 
 public:
+	EClassCode ClassType;
+
+public:
 	FCharacterInfo Source;  // 버프 영향 받기 전 스탯
 	FCharacterInfo Current; // 버프 영향 받은 후 스탯
 
@@ -134,17 +152,10 @@ public:
 	UGageUI* CastBar; // 포인터 저장용
 
 public:
-	/*
-		잠재적 이슈
-		Skill이 단순 구조체이기 때문에 Info를 읽는게 스택 데이터를 읽음 
-		해당 객체가 사라졌으나 버프 등 Info를 읽어야 하는 상황 발생 시 문제
-
-		수정 완료
-	*/
-	
 	TMap<USkillData*, UGenericSkill*> SkillList;  // 배운 스킬 목록입니다.
-	TMap<EActionID,   UGenericSkill*> SkillSlots; // 바인딩 된 스킬 목록입니다.
-	TArray<USkillData*>               SkillTable; // 배운 스킬 인덱싱용 배열입니다.
+
+public:
+	TArray<USkillData*> UseableSkillList; // 배울 수 있는 스킬 목록입니다.
 
 public:
 	CTarget Target  = CTarget(this); // 타겟팅 유틸입니다.

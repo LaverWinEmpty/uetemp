@@ -80,6 +80,7 @@ public:
 
 public:
 	void PlayerAction(EActionID);
+	void PlayerAction(UGenericSkill*);
 
 public:
 	void SetTargetOfPlayer(IInteractable* InOther);

@@ -2,8 +2,8 @@
 
 #include <LWE_WOW/Generic/GenericCharacter.h>
 
-
-CBuff::CBuff(AGenericCharacter* InParent) : m_Parent(InParent)
+// Parent에게 적용됩니다.
+CBuff::CBuff(AGenericCharacter* InParent) : m_Parent(InParent), m_Caster(nullptr)
 {
 }
 
@@ -11,7 +11,7 @@ CBuff::~CBuff()
 {
 }
 
-void CBuff::Add(UBuffData* InData, int InLevel)
+void CBuff::Add(AGenericCharacter* InCaster, UBuffData* InData, int InLevel)
 {
     TSharedPtr<Applied> Ptr = nullptr;
 
@@ -34,6 +34,9 @@ void CBuff::Add(UBuffData* InData, int InLevel)
 
     // 없는 효과면 새롭게 적용합니다.
     else {
+        // 시전자 정보 저장
+        m_Caster = InCaster;
+
         Ptr = MakeShared<Applied>();
         Ptr->Info = InData->Calculate(InLevel);
         Ptr->State = InData->Initialize();
@@ -41,9 +44,9 @@ void CBuff::Add(UBuffData* InData, int InLevel)
         m_Applied.Add(InData->Name, Ptr); // 추가합니다.
     }
 
-    InData->OnBegin(m_Parent);
+    InData->OnBegin(Ptr->Info.Power, m_Caster, m_Parent);
     if (InData->Option & static_cast<uint8>(EBuffFlag::EALRY_TICK)) {
-        InData->OnTick(m_Parent); // 플래그 켜져있으면 즉시 시전
+        InData->OnTick(Ptr->Info.Power, m_Caster, m_Parent); // 플래그 켜져있으면 즉시 시전
     }
 	Ptr->Data = InData;
 }
@@ -73,7 +76,7 @@ void CBuff::OnTick(float DeltaTime)
         if (!m_Parent->IsDead && Buff->State.Interval >= Buff->Info.Interval) {
             Buff->State.Interval -= Buff->Info.Interval; // 다시 카운트 하기 위해 뺍니다
             Buff->State.Duration += Buff->Info.Interval; // 정확하게 계산하기 위해 Duration에 같은 값을 더합니다.
-            Buff->Data->OnTick(m_Parent);            // 실행됩니다.
+            Buff->Data->OnTick(Buff->Info.Power, m_Caster, m_Parent); // 실행됩니다.
 
             if (m_Parent->IsDead) {
                 // 죽어도 버프 유지
@@ -97,8 +100,8 @@ void CBuff::OnTick(float DeltaTime)
         // 일회성 스킬 검사의 경우는 Duration이 0이기 때문에 필요 없습니다.
         if (Buff->State.Duration >= Buff->Info.Duration ||
             (Buff->State.Duration + Buff->State.Interval) >= Buff->Info.Duration) {
-            Buff->Data->OnEnd(m_Parent); // 종료 시 함수를 호출해줍니다.
-            Itr.RemoveCurrent();                 // 종료
+            Buff->Data->OnEnd(Buff->Info.Power, m_Caster, m_Parent); // 종료 시 함수를 호출해줍니다.
+            Itr.RemoveCurrent(); // 종료
         }
     }
 }

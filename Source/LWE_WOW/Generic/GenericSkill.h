@@ -3,6 +3,7 @@
 #pragma once
 
 #include <LWE_WOW/Status/SkillInfo.h>
+#include <LWE_WOW/Interface/Slotable.h>
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
@@ -19,6 +20,7 @@ class LWE_WOW_API UGenericSkill : public UObject
 	GENERATED_BODY()
 
 public:
+	UPROPERTY()
 	USkillData* Data;
 	FSkillInfo  Info;
 	int         Level;

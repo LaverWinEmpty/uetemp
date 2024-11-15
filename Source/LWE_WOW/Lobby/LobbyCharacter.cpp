@@ -4,6 +4,7 @@
 #include "LobbyCharacter.h"
 
 #include <LWE_WOW/Data/CharacterData.h>
+#include <LWE_WOW/Skill/Skill_Arrow.h>
 
 ALobbyCharacter::ALobbyCharacter()
 {

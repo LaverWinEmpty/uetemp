@@ -1,13 +1,15 @@
 #pragma once
 
+#include <LWE_WOW/Generic/GenericUI.h>
+
 #include "Components/TextBlock.h"
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "UIManager.generated.h"
 
-class UUserWidget;
-class UGenericIcon;
+class UGenericUI;
+class UQuickSlotUI;
 
 /**
  * 
@@ -17,20 +19,28 @@ class LWE_WOW_API UUIManager : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 
+
 public:
     enum EUIList {
         UI_MAIN,
-        UI_SKILL_SLOT_1,
+        UI_INVENTORY,
+        UI_EQUIPMENT,
+        UI_SKILL,
+
+        // Insert...
+        
+        UI_QUICKSLOT_0,
+        UI_QUICKSLOT_1,
+
         UI_END,
         UI_BEGIN = 0,
+        UI_QUICKSLOT_BEGIN = UI_QUICKSLOT_0,
+        UI_QUICKSLOT_END   = UI_END,
     };
 
 public:
     void Setup();
     void Cleanup();
-
-public:
-    void Reset();
 
 public:
     UUIManager();
@@ -46,6 +56,13 @@ public:
 
 public:
     inline void SetTargetInfo(AActor* In);
+
+public:
+    UQuickSlotUI* GetSkillSlot(EActionID);
+
+public:
+    void Show(EUIList, bool);
+    void Toggle(EUIList);
 
 public:
 	void HideExitDialogBox();
@@ -70,10 +87,10 @@ public:
     FTimerHandle MessageBoxUpdater;
 
 private:
-    TArray<TSubclassOf<UUserWidget>> Resource; // 외부에서 가져올 변수
+    TArray<TSubclassOf<UGenericUI>> Resource; // 외부에서 가져올 변수
 
 public:
-    UUserWidget* Widgets[UI_END];
+    UGenericUI* Widgets[UI_END];
 
 private:
 	UWidget*    m_Dialog_Exit;
@@ -81,8 +98,12 @@ private:
     UImage*     m_DeadOverride;
 
 private:
-    bool m_IsSetup         = false;
-	bool m_bShowExitDialog = true; // 로그아웃 메세지 박스
+    bool m_IsSetup         : 1 = false;
+	bool m_bShowExitDialog : 1 = true; // 로그아웃 메세지 박스
+
+    
+
+    void* Old = nullptr;
 };
 
 /*

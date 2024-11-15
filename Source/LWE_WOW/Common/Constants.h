@@ -59,21 +59,42 @@ enum class ERelationType : uint8 {
 ENUM_CLASS_FLAGS(ERelationType);
 
 // 직업 코드
-// 여러 직업이 배울 수 있는 스킬을 위해 플래그로 정의
+// 여러 직업이 배울 수 / 사용할 수 있는 스킬을 위해 플래그로 정의
 UENUM(BlueprintType, Meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
 enum class EClassCode : uint8 {
-	NONE    = 0      UMETA(Hidden),
-	WARRIOR = 1 << 0 UMETA(DisplayName = "Warrior"),
+	NONE      = 0      UMETA(Hidden),
+	BARBARIAN = 1 << 0 UMETA(DisplayName = "Barbarian"),
+	DWARF     = 1 << 1 UMETA(DisplayName = "Dwarf"),
+	KNIGHT    = 1 << 2 UMETA(DisplayName = "Knight"),
+	WARRIOR   = 1 << 3 UMETA(DisplayName = "Warrior"),
 };
 ENUM_CLASS_FLAGS(EClassCode);
 
-// 아이템 코드
-// 여러 직업이 배울 수 사용할 수 있는 스킬을 위해 플래그로 정의
+// 무기 코드
+// 언젠간 쓰겠지 모션같은거 ㅁㄹ
 UENUM(BlueprintType, Meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
 enum class EWeaponCode : uint8 {
-	NONE = 0      UMETA(Hidden),
+	NONE = 0 UMETA(Hidden),
 };
 ENUM_CLASS_FLAGS(EWeaponCode);
 
+// 아이템 메시 유형
+UENUM(BlueprintType)
+enum class EItemMeshType : uint8 {
+	CONSUM UMETA(DisplayName = "No Mesh Type (Consum Item)"),
+	WEAPON UMETA(DisplayName = "Static Mesh Type (Weapon)"),
+	ARMOR  UMETA(DisplayName = "Skeletal Mesh Type (Armor)"),
 
-#define ECC_ACTOR_SEARCH ECollisionChannel::ECC_GameTraceChannel1 // 캐릭터 찾는 데만 사용
+	NONE     = CONSUM UMETA(Hidden),
+	STATIC   = WEAPON UMETA(Hidden),
+	SKELETAL = ARMOR  UMETA(Hidden),
+};
+
+// 아이템 슬롯 칸 Indexable
+UENUM(BlueprintType)
+enum class EItemSlotTypeIdx : uint8 {
+	NONE   UMETA(DisplayName = "Can not euqipment"),
+	WEAPON UMETA(DisplayName = "Weapon"),
+};
+
+#define ECC_ACTOR_FINDER ECollisionChannel::ECC_GameTraceChannel1 // 캐릭터 찾는 데만 사용

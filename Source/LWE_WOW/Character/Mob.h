@@ -35,6 +35,9 @@ public:
 
 	UGenericSkill* SelectSkill();
 
+public:
+	virtual void Initialize() override;
+
 protected:
 	float m_MoveUpdateTime   = 0; // 랜덤
 	float m_BattleUpdateTime = 1;

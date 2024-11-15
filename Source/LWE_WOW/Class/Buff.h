@@ -25,10 +25,11 @@ public:
 	};
 
 public:
-	void Add(UBuffData*, int Level);
+	void Add(AGenericCharacter*, UBuffData*, int InLevel);
 	void OnTick(float DeltaTime);
 
 private:
 	AGenericCharacter*               m_Parent;  // 이펙트를 적용할 객체입니다.
+	AGenericCharacter*               m_Caster;  // 이펙트를 적용한 객체입니다.
 	TMap<FName, TSharedPtr<Applied>> m_Applied; // 해당 객체가 적용중인 이펙트입니다.
 };

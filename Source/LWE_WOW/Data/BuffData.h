@@ -67,7 +67,7 @@ public:
 	virtual FBuffInfo        Calculate(int InLevel)   const;
 
 public:
-	virtual void OnBegin(AGenericCharacter* InTarget) const;
-	virtual void OnTick(AGenericCharacter* InTarget) const;
-	virtual void OnEnd(AGenericCharacter* InTarget) const;
+	virtual void OnBegin(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
+	virtual void OnTick(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
+	virtual void OnEnd(float InPower, AGenericCharacter* InCaster, AGenericCharacter* InTarget) const;
 };

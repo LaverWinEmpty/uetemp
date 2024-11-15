@@ -5,6 +5,7 @@
 
 #include <LWE_WOW/Generic/GenericCharacter.h>
 #include <LWE_WOW/Generic/GenericEffect.h>
+#include <LWE_WOW/Generic/GenericSkill.h>
 
 USkillArrow::USkillArrow() : USkillData()
 {
@@ -28,8 +29,7 @@ void USkillArrow::Execute(UGenericSkill* In, AGenericCharacter* InCaster, AGener
 void USkillArrow::Final(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const
 {
 	Super::Final(In, InCaster, InTarget, InActor);
-	InCaster->Damage(In, InTarget);
-	ApplyBuff(InTarget);
+	ApplyBuff(InCaster, InTarget, In->Level);
 }
 
 void USkillArrow::OnTick(UGenericSkill* In, AGenericCharacter* InCaster, AGenericCharacter* InTarget, AGenericEffect* InActor) const

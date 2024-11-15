@@ -1,10 +1,12 @@
 #include "GenericPlayer.h"
 
 #include <LWE_WOW/Generic/GenericInput.h>
-#include <LWE_WOW/Generic/GenericIcon.h>
 #include <LWE_WOW/Generic/GenericSkill.h>
 #include <LWE_WOW/Manager/UIManager.h>
 #include <LWE_WOW/Data/SkillData.h>
+#include <LWE_WOW/UI/QuickSlotUI.h>
+#include <LWE_WOW/Data/ItemData.h>
+#include <LWE_WOW/UI/SkillUI.h>
 
 auto AGenericPlayer::GetType() const -> ETargetType
 {
@@ -22,11 +24,6 @@ void AGenericPlayer::BeginPlay()
 	Super::BeginPlay();
 
 	Team = ETeamType::A; // 임시
-
-	// 테스트 코드: 스킬 바인딩
-	for (int i = 0; i < SkillList.Num(); ++i) {
-		SetSkillSlot(static_cast<EActionID>(IA_COMMAND_0 + i), SkillList[SkillTable[i]]);
-	}
 }
 
 void AGenericPlayer::View(const FVector& InTarget)
@@ -42,6 +39,12 @@ void AGenericPlayer::View(const FVector& InTarget)
 	PlayerHnadler->GetCameraArm()->SetWorldRotation(CameraRotator);
 }
 
+void AGenericPlayer::Initialize()
+{
+	Super::Initialize();
+	Cast<USkillUI>(UUIManager::Instance(this)->Widgets[UUIManager::UI_SKILL])->RegisterSkill();
+}
+
 void AGenericPlayer::SetSkillSlot(EActionID InID, UGenericSkill* InSkill)
 {
 	// 스킬 정보가 없거나 빈 데이터면
@@ -49,15 +52,17 @@ void AGenericPlayer::SetSkillSlot(EActionID InID, UGenericSkill* InSkill)
 		return;
 	}
 
-	// 슬롯에 세팅
-	if (SkillSlots.Find(InID)) {
-		SkillSlots[InID] = SkillList[InSkill->Data];
-	}
-	else SkillSlots.Add(InID, SkillList[InSkill->Data]);
+	//// 슬롯에 세팅
+	//if (SkillSlots.Find(InID)) {
+	//	SkillSlots[InID] = SkillList[InSkill->Data];
+	//}
+	//else SkillSlots.Add(InID, SkillList[InSkill->Data]);
 
-	// 임시
-	// 위젯 가져와서 이미지 세팅
-	auto SlotWidget = UUIManager::Instance(this)->Widgets[UUIManager::EUIList::UI_SKILL_SLOT_1];
-	auto Slots = Cast<UGenericIcon>(SlotWidget);
-	Slots->Slot[InID - IA_COMMAND_0]->SetBrushFromTexture(InSkill->Data->Image);
+	// 위젯 가져옴
+	UQuickSlotUI* Slots = Cast<UQuickSlotUI>(
+		UUIManager::Instance(this)->Widgets[UQuickSlotUI::GetUIIndex(InID)]
+	);
+
+	// ID를 인덱스로 변환 후 해당 위치에 저장
+	Slots->SetSlotInfo(InID, InSkill);
 }

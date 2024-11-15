@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <LWE_WOW/Data/ItemData.h>
 
 #include "CoreMinimal.h"
 #include "LWE_WOW/Generic/GenericCharacter.h"
@@ -28,6 +29,8 @@ public:
 	virtual void View(const FVector&) override;
 
 public:
-	void SetSkillSlot(EActionID InID, UGenericSkill* InSkill);
+	virtual void Initialize() override;
 
+public:
+	void SetSkillSlot(EActionID InID, UGenericSkill* InSkill);
 };

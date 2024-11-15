@@ -46,6 +46,9 @@ public:
 			case ACT_TARGET_NOT_EXISTS: return _T("대상이 없습니다.");
 			case ACT_TARGET_IS_INVALID: return _T("시전할 수 없는 대상입니다.");
 			case ACT_TARGET_IS_DIED:    return _T("대상이 이미 죽었습니다.");
+			case ACT_DIED:              return _T("죽었습니다.");
+
+
 			case ACT_SUCCEED:
 			case ACT_ACTING:
 				return _T("");

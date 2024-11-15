@@ -47,7 +47,7 @@ public:
 
 	// 공격력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
-	float Attck;
+	float Attack;
 		
 	// 방어력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")
@@ -76,8 +76,4 @@ public:
 	// 부가 스탯 (와우: 특화)
 	UPROPERTY(BlueprintReadWrite, Category = "Information")
 	float Extra;         
-	
-	// 직업 유형
-	UPROPERTY(BlueprintReadWrite, Category = "Information")
-	EClassCode ClassType;
 };

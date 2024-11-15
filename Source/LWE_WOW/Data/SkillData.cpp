@@ -43,10 +43,10 @@ void USkillData::Execute(UGenericSkill*, AGenericCharacter* InParent, AGenericCh
 void USkillData::Final  (UGenericSkill*, AGenericCharacter* InParent, AGenericCharacter* InTarget, AGenericEffect* InActor) const { InTarget->OnHit(InParent); }
 void USkillData::OnTick (UGenericSkill*, AGenericCharacter* InParent, AGenericCharacter* InTarget, AGenericEffect* InActor) const { InTarget->OnHit(InParent); }
 
-void USkillData::ApplyBuff(AGenericCharacter* InTarget) const
+void USkillData::ApplyBuff(AGenericCharacter* InCaster, AGenericCharacter* InTarget, int Level) const
 {
 	// 효과 전달
 	for (int i = 0; i < Apply.Num(); ++i) {
-		InTarget->Effects.Add(Apply[i]->GetDefaultObject<UBuffData>(), 0);
+		InTarget->Effects.Add(InCaster, Apply[i]->GetDefaultObject<UBuffData>(), Level);
 	}
 }

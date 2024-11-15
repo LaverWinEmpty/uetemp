@@ -2,18 +2,23 @@
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/TextBlock.h"
 
-#include "LWE_WOW/Generic/GenericIcon.h"
+#include <LWE_WOW/UI/QuickSlotUI.h>
+#include <LWE_WOW/Common/Util.h>
 
 UUIManager::UUIManager()
 {
     static ConstructorHelpers::FClassFinder<UUserWidget> Finder[] = {
         (_T("/Game/UI/UI_Main.UI_Main_C")),
-        (_T("/Game/UI/UI_SkillSlot.UI_SkillSlot_C")),
+        (_T("/Game/UI/UI_Inventory.UI_Inventory_C")),
+        (_T("/Game/UI/UI_Equipment.UI_Equipment_C")),
+        (_T("/Game/UI/UI_Skill.UI_Skill_C")),
+        (_T("/Game/UI/UI_QuickSlot_0.UI_QuickSlot_0_C")),
+        (_T("/Game/UI/UI_QuickSlot_1.UI_QuickSlot_1_C")),
     };
 
     static constexpr int SIZE = (sizeof(Finder) / sizeof(*Finder));
-    
     Resource.Init(nullptr, SIZE);
     for (int i = 0; i < SIZE; ++i) {
         Resource[i] = Finder[i].Class;
@@ -22,25 +27,38 @@ UUIManager::UUIManager()
 
 void UUIManager::Setup()
 {
-    if (m_IsSetup) return;
+    if (m_IsSetup) {
+        Cleanup();
+    }
     m_IsSetup = true;
 
     int Loop = Resource.Num();
-    for (int i = 0; i < UI_END; ++i) {
-        Widgets[i] = CreateWidget<UUserWidget>(GetWorld(), Resource[i]);
-        Widgets[i]->AddToViewport();
+
+    // 이곳에서 할당됩니다.
+    for (int i = UI_BEGIN; i < UI_END; ++i) {
+        Widgets[i] = CreateWidget<UGenericUI>(GetWorld(), Resource[i]);
+        Widgets[i]->AddToViewportWithPresetZOrder();
     }
+
+    // 퀵슬롯 인덱싱
+    int Index = 0;
+    for (int i = UI_QUICKSLOT_0; i < UI_QUICKSLOT_END; ++i) {
+        Cast<UQuickSlotUI>(Widgets[i])->WidgetIndex = Index++;
+    }
+
+    // 버튼 할당 관련
 
     UPanelWidget* Root, * Panel;
     UButton* Btn;
 
     Root = UUIManager::GetRoot(Widgets[UI_MAIN]);
 
+    // 나가기 UI
     Panel = Cast<UPanelWidget>(Root->GetChildAt(0));
     Btn = Cast<UButton>(Panel->GetChildAt(0));
     Btn->OnClicked.AddDynamic(this, &UUIManager::ExitButton);
 
-
+    // 종료 UI
     Panel = Cast<UPanelWidget>(Root->GetChildAt(1));
     Btn = Cast<UButton>(Panel->GetChildAt(0));
     Btn->OnClicked.AddDynamic(this, &UUIManager::YesButton);
@@ -60,23 +78,22 @@ void UUIManager::Setup()
     m_DeadOverride->SetVisibility(ESlateVisibility::Hidden); // 죽으면 회색빛으로 override, 숨김
 
     m_MsgBox = Widgets[UI_MAIN]->WidgetTree->FindWidget<UTextBlock>("MessageBox");
+
+    // 초기값: 숨김
+    Show(UI_INVENTORY, false);
+    Show(UI_EQUIPMENT, false);
+    Show(UI_SKILL,     false);
 }
 
 void UUIManager::Cleanup()
 {
     for (int i = 0; i < UI_END; ++i) {
-        Widgets[i] = nullptr;
+        Widgets[i]->MarkAsGarbage();
     }
     m_IsSetup = false;
     FTimerManager& TimerManager = GetWorld()->GetTimerManager();
     TimerManager.ClearTimer(MessageBoxStarter);
     TimerManager.ClearTimer(MessageBoxUpdater);
-}
-
-void UUIManager::Reset()
-{
-    Cleanup();
-    Setup();
 }
 
 UPanelWidget* UUIManager::GetRoot(UUserWidget* In)
@@ -108,12 +125,48 @@ void UUIManager::SetTargetInfo(AActor* In)
     }
 }
 
+UQuickSlotUI* UUIManager::GetSkillSlot(EActionID In)
+{
+    return Cast<UQuickSlotUI>(Widgets[UQuickSlotUI::GetUIIndex(In)]);
+}
+
+void UUIManager::Show(EUIList InIndex, bool Is)
+{
+    // 최상위 패널 기준이기 때문에 Visible이 아닌 해당 옵션을 사용합니다.
+    Widgets[InIndex]->SetVisibility(Is ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Hidden);
+}
+
+void UUIManager::Toggle(EUIList InIndex)
+{
+    // 예외처리할 목록
+    switch (InIndex) {
+        case UI_END:
+            // Insert...
+            return;
+    }
+
+    ESlateVisibility State = Widgets[InIndex]->GetVisibility();
+    if (State == ESlateVisibility::SelfHitTestInvisible) {
+        State = ESlateVisibility::Hidden;
+    }
+    else if (State == ESlateVisibility::Hidden) {
+        State = ESlateVisibility::SelfHitTestInvisible;
+    }
+
+    // 다른 상태면 그냥 숨겨버립니다.
+    else State = ESlateVisibility::Hidden;
+
+    if (Widgets[InIndex]) {
+        Widgets[InIndex]->SetVisibility(State);
+    }
+}
+
 void UUIManager::HideExitDialogBox()
 {
     if (!m_bShowExitDialog) {
         return;
     }
-    m_bShowExitDialog = false;
+    m_bShowExitDialog = false;  
     m_Dialog_Exit->SetVisibility(ESlateVisibility::Hidden);
 }
 
@@ -201,7 +254,6 @@ void UUIManager::SetMessageText(const TCHAR* const InString)
             }
         }, 0.1f, true); // 0.1초 간격으로 반복
     }, 3.0f, false); // 3초 뒤 1회 호출
-
 }
 
 
