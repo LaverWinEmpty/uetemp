@@ -31,19 +31,19 @@ struct LWE_WOW_API FItemData : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
 	EItemMeshType ItemMeshType;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType==EItemType::WEAPON", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType==EItemMeshType::WEAPON", EditConditionHides))
 	UStaticMesh* StaticMesh;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType==EItemType::ARMOR", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType==EItemMeshType::ARMOR", EditConditionHides))
 	USkeletalMesh* SkeletalMesh;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType!=EItemType::CONSUM", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType!=EItemMeshType::CONSUM", EditConditionHides))
 	FVector MeshLocationAdjust;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType!=EItemType::CONSUM", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType!=EItemMeshType::CONSUM", EditConditionHides))
 	FRotator MeshRotationAdjust;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType!=EItemType::CONSUM", EditConditionHides))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh", meta = (EditCondition = "ItemMeshType!=EItemMeshType::CONSUM", EditConditionHides))
 	FVector Scale = { 1, 1, 1 };
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Information")

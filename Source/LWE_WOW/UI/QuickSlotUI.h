@@ -18,8 +18,6 @@ class LWE_WOW_API UQuickSlotUI : public USlotUI
 {
 	GENERATED_BODY()
 
-    friend class UPlayerManager;
-
 protected:
     inline static int SLOT_MAX = 0;
 
@@ -52,9 +50,6 @@ public:
     // ID가 14인 경우 12칸 슬롯 기준으로 [1][2] 배열과 동일한 형태가 됩니다.
     // 따라서 1이 반환되게 됩니다.
     static UUIManager::EUIList GetUIIndex(EActionID);
-
-public:
-    AGenericInput* m_Input;
 
 public:
     int WidgetIndex = 0;

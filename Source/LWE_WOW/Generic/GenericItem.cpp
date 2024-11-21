@@ -11,14 +11,12 @@
 void UGenericItem::SetData(const FItemData& InData)
 {
 	Data = InData;
+	Icon = InData.Icon;
 }
 
 void UGenericItem::OnEquipment(AGenericCharacter* InParent)
 {
-	if (InParent->GetMesh()->DoesSocketExist(Data.SocketName)) {
-		Mesh = Data.CreateMeshComponent(InParent);
-		check(Mesh); // 생성 실패
-	}
+	CreateMesh(InParent);
 
 	// 임시
 	InParent->Source.Attack += Data.Increment.Attack;
@@ -29,12 +27,25 @@ void UGenericItem::OnEquipment(AGenericCharacter* InParent)
 
 void UGenericItem::OnUnequipment(AGenericCharacter* InParent)
 {
-	Mesh->DestroyComponent();
+	DestroyMesh();
 
 	// 임시
 	InParent->Source.Attack -= Data.Increment.Attack;
 	InParent->UpdateStatus();
 	PostEquipment();
+}
+
+void UGenericItem::CreateMesh(AGenericCharacter* InParent)
+{
+	if (InParent->GetMesh()->DoesSocketExist(Data.SocketName)) {
+		Mesh = Data.CreateMeshComponent(InParent);
+		check(Mesh); // 생성 실패
+	}
+}
+
+void UGenericItem::DestroyMesh()
+{
+	Mesh->DestroyComponent();
 }
 
 void UGenericItem::PostEquipment()

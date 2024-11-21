@@ -2,6 +2,7 @@
 
 #include "BuffData.h"
 
+#include <LWE_WOW/Common/Util.h>
 #include <LWE_WOW/Generic/GenericCharacter.h>
 
 int UBuffData::AdjustLevel(int InLevel) const

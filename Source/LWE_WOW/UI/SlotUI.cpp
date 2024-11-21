@@ -1,15 +1,14 @@
 #include "SlotUI.h"
-
 #include "Blueprint/WidgetBlueprintLibrary.h"
 
+#include <LWE_WOW/Generic/GenericCharacter.h>
 #include <LWE_WOW/Manager/UIManager.h>
-
-// UTexture2D* const& USlotUI::EMPTY = ConstructorHelpers::FObjectFinder<UTexture2D>(_T("/Game/Resource/UI/Empty64.Empty64")).Object;
-
-UTexture2D* const& USlotUI::EMPTY = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, _T("/Game/Resource/UI/Empty64.Empty64")));
 
 USlotUI::USlotUI(const FObjectInitializer& In) : Super(In)
 {
+    if (!EMPTY) {
+        EMPTY = ConstructorHelpers::FObjectFinder<UTexture2D>(_T("/Game/Resource/Texture/Empty64.Empty64")).Object;
+    }
     check(EMPTY);
 }
 
@@ -36,6 +35,7 @@ void USlotUI::NativeConstruct()
     else check(false);
 
     m_Parent = Cast<AGenericCharacter>(GetOwningPlayerPawn());
+    m_Input = Cast<AGenericInput>(GetOwningPlayerPawn()->GetController());
 }
 
 FReply USlotUI::NativeOnMouseButtonDown(const FGeometry& In, const FPointerEvent& InEvent)
@@ -59,7 +59,7 @@ FReply USlotUI::NativeOnMouseButtonDown(const FGeometry& In, const FPointerEvent
 FReply USlotUI::NativeOnMouseButtonUp(const FGeometry& In, const FPointerEvent& InEvent)
 {
     // set nullptr
-    Release();
+    SelectedFree();
     return FReply::Handled();
 }
 
@@ -88,13 +88,13 @@ void USlotUI::NativeOnDragDetected(const FGeometry& In,
 
 bool USlotUI::NativeOnDrop(const FGeometry& In, const FDragDropEvent& InEvent, UDragDropOperation* InOperation)
 {
-    Release();
+    SelectedFree();
     return true;
 }
 
 void USlotUI::NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
-    Release();
+    SelectedFree();
 }
 
 auto USlotUI::GetSlot(int Index)->Slot*
@@ -102,15 +102,19 @@ auto USlotUI::GetSlot(int Index)->Slot*
     return &m_Slots[Index];
 }
 
-void USlotUI::SetSlot(const Slot& InSlot, int InIndex)
+void USlotUI::SetSlot(USlot* InSlot, int InIndex)
 {
-    m_Slots[InIndex] = InSlot;
+    m_Slots[InIndex].Info = InSlot;
+    if (InSlot) {
+        m_Slots[InIndex].Icon->SetBrushFromTexture(InSlot->Icon);
+    }
+    else m_Slots[InIndex].Icon->SetBrushFromTexture(EMPTY);
 }
 
 void USlotUI::Remove(int InIndex)
 {
-    m_Slots[InIndex].Icon->SetBrushFromTexture(EMPTY);
     m_Slots[InIndex].Info = nullptr;
+    m_Slots[InIndex].Icon->SetBrushFromTexture(EMPTY);
 }
 
 void USlotUI::Swap(Slot* A, Slot* B)
@@ -119,7 +123,7 @@ void USlotUI::Swap(Slot* A, Slot* B)
     if (!A || !B || A == B) return;
 
     FSlateBrush AIconTempBrush = A->Icon->GetBrush();
-    UObject* AInfo = A->Info;
+    USlot* AInfo = A->Info;
 
     A->Info = B->Info;
     A->Icon->SetBrush(B->Icon->GetBrush());
@@ -128,26 +132,15 @@ void USlotUI::Swap(Slot* A, Slot* B)
     B->Icon->SetBrush(AIconTempBrush);
 }
 
-
-void USlotUI::Select(Slot& In, const FPointerEvent& InEvent)
-{
-    st_Selected         = &In;
-    st_SelectedParent   = this;
-    st_SelectedMousePos = InEvent.GetScreenSpacePosition();
-}
-
-void USlotUI::Release()
+void USlotUI::SelectedFree()
 {
 	st_Selected       = nullptr;
     st_SelectedParent = nullptr;
 }
 
-auto USlotUI::SetHoveredSlot(const FPointerEvent& InEvent)->Slot*
+int USlotUI::GetSlotCount() const
 {
-    st_Selected = GetHoveredSlot(InEvent);
-    st_SelectedParent = this;
-    st_SelectedMousePos = InEvent.GetScreenSpacePosition();
-    return st_Selected;
+    return m_Slots.Num();
 }
 
 auto USlotUI::GetHoveredSlot(const FPointerEvent& InEvent)->Slot*
@@ -164,4 +157,12 @@ auto USlotUI::GetHoveredSlot(const FPointerEvent& InEvent)->Slot*
     }
 
     return nullptr;
+}
+
+auto USlotUI::SetHoveredSlot(const FPointerEvent& InEvent)->Slot*
+{
+    st_Selected       = GetHoveredSlot(InEvent);
+    st_SelectedParent = this;
+
+    return st_Selected;
 }

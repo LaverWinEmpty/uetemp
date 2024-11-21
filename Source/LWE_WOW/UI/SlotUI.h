@@ -3,6 +3,7 @@
 #include <LWE_WOW/Common/Constants.h>
 #include <LWE_WOW/Generic/GenericSkill.h>
 #include <LWE_WOW/Generic/GenericUI.h>
+#include <LWE_WOW/UI/SlotInfo.h>
 
 #include "SlotUI.generated.h"
 
@@ -18,8 +19,8 @@ class USlotUI : public UGenericUI
 protected:
     struct Slot {
         UPROPERTY()
-        UObject* Info; // 슬롯의 실제 정보입니다.
-        UImage*  Icon; // 슬롯의 이미지 입니다.
+        USlot*  Info;
+        UImage* Icon;
     };
     TArray<Slot> m_Slots;
 
@@ -39,36 +40,42 @@ public:
 
 public:
     Slot* GetSlot(int);
-    void  SetSlot(const Slot&, int);
+    void  SetSlot(USlot*, int);
     void  Remove(int);
 
 public:
     void Swap(Slot* A, Slot* B);
 
 public:
-    virtual void Select(Slot& In, const FPointerEvent& InEvent);
-    virtual void Release();
+    // Select 해제합니다.
+    void SelectedFree();
 
 public:
     // 현재 마우스 위치의 슬롯을 가져옵니다.
     Slot* GetHoveredSlot(const FPointerEvent&);
 
-    // 현재 마우스 위치의 슬롯을 가져오며 Selected에 저장해둡니다.
+    // 현재 마우스 위치의 슬롯을 가져오고 저장합니다.
     Slot* SetHoveredSlot(const FPointerEvent&);
+
+public:
+    int GetSlotCount() const;
 
 protected:
     AGenericCharacter* m_Parent;
+    AGenericInput*     m_Input;
 
 public:
     // 실제 슬롯이 담긴 패널 (최상위 자식)
     UPanelWidget* SlotWidget = nullptr;
+        
+protected:
+    // 슬롯의 부모 == this
+    // 이 변수를 사용하기 위해 Payload를 쓰지 않습니다.
+    // 마우스는 한 개라고 가정하기 때문에 static으로 사용합니다.
+    inline static USlotUI*  st_SelectedParent   = nullptr;
+    inline static Slot*     st_Selected         = nullptr;
 
 protected:
-    inline static Slot*     st_Selected         = nullptr;  // 선택된 슬롯 정보
-    inline static USlotUI*  st_SelectedParent   = nullptr;  // 슬롯의 부모 == this
-    inline static FVector2d st_SelectedMousePos = { 0, 0 }; // 선택 시점의 마우스 위치
-
-public:
     // 투명 텍스처입니다.
-    static UTexture2D* const& EMPTY;
+    inline static UTexture2D* EMPTY = nullptr;
 };

@@ -30,9 +30,10 @@ FReply UEquipUI::NativeOnMouseButtonDown(const FGeometry& In, const FPointerEven
 		// 인벤토리 UI 가져와서
 		// 빈 슬롯 찾아서 그 슬롯과 교체, 빈 슬롯 없으면 무시
 		if (UInvenUI* UI = Cast<UInvenUI>(UUIManager::Instance(this)->Widgets[UUIManager::UI_INVENTORY])) {
-			Slot* This = GetHoveredSlot(InEvent);
-			Cast<UGenericItem>(This->Info)->OnUnequipment(m_Parent); // 장착 해제
-			Swap(This, UI->GetEmptySlot());
+			if (Slot* This = GetHoveredSlot(InEvent)) {
+				Cast<UGenericItem>(This->Info)->OnUnequipment(m_Parent); // 장착 해제
+				Swap(This, UI->GetEmptySlot());
+			}
 			return FReply::Handled();
 		}
 	}

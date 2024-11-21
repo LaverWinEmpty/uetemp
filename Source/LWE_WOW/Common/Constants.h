@@ -67,6 +67,8 @@ enum class EClassCode : uint8 {
 	DWARF     = 1 << 1 UMETA(DisplayName = "Dwarf"),
 	KNIGHT    = 1 << 2 UMETA(DisplayName = "Knight"),
 	WARRIOR   = 1 << 3 UMETA(DisplayName = "Warrior"),
+
+	TESTER = 255
 };
 ENUM_CLASS_FLAGS(EClassCode);
 

@@ -1,15 +1,16 @@
 #pragma once
 
 #include <LWE_WOW/Generic/GenericUI.h>
-
-#include "Components/TextBlock.h"
+#include <LWE_WOW/Common/Constants.h>
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Components/TextBlock.h"
 #include "UIManager.generated.h"
 
 class UGenericUI;
 class UQuickSlotUI;
+class UProgressBar;
 
 /**
  * 
@@ -39,8 +40,13 @@ public:
     };
 
 public:
-    void Setup();
+    bool Setup();
     void Cleanup();
+    void Reset();
+
+public:
+    // 현재 UI ShowState에 따라 On/Off 됩니다.
+    void SetUI();
 
 public:
     UUIManager();
@@ -55,7 +61,7 @@ public:
     static UUIManager* Instance(UObject* InWorldContextObject);
 
 public:
-    inline void SetTargetInfo(AActor* In);
+    void SetTargetInfo(AActor* In);
 
 public:
     UQuickSlotUI* GetSkillSlot(EActionID);
@@ -93,17 +99,26 @@ public:
     UGenericUI* Widgets[UI_END];
 
 private:
-	UWidget*    m_Dialog_Exit;
-    UTextBlock* m_MsgBox;
-    UImage*     m_DeadOverride;
+	UWidget*      m_Dialog_Exit;
+    UTextBlock*   m_MsgBox;
+    UImage*       m_DeadOverride;
+    UProgressBar* m_LoadingBar;
+
+public:
+    bool UIShowState[UI_END] = {
+        true,  // Main
+        false, // Inven
+        false, // Euqip
+        false, // Skill
+        true,  // Qucik 0
+        true,  // Qucik 1
+    };
+
+public:
+    bool IsSetup : 1 = false;
 
 private:
-    bool m_IsSetup         : 1 = false;
 	bool m_bShowExitDialog : 1 = true; // 로그아웃 메세지 박스
-
-    
-
-    void* Old = nullptr;
 };
 
 /*

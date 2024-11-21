@@ -36,7 +36,8 @@ public:
 	~AGenericInput();
 
 public:
-	virtual void OnPossess(APawn*) override;
+	virtual void OnPossess(APawn*)     override;
+	virtual void OnUnPossess()         override;
 	virtual void SetupInputComponent() override;
 
 private:

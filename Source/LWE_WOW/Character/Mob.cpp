@@ -82,7 +82,6 @@ void AMob::MoveTick()
 		(IsReturn && CUtil::IsIn(this, InitialLocation, WaitAreaRange * 0.5))) {
 			
 		IsTargetMove = false;           // 이동 종료
-		m_Movement->MaxWalkSpeed = 600; // 속도 복구
 		IsReturn = false;               // 복귀 종료
 	}
 
@@ -192,7 +191,6 @@ void AMob::Tracking()
 		IsBattle = false;
 		IsReturn = true;
 		Target.Unsetting();
-		m_Movement->MaxWalkSpeed = 1500; // 빠르게 복귀
 		m_Time = 0; // 업데이트 대기
 		return;
 	}

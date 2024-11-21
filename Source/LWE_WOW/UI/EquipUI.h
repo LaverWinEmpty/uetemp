@@ -11,8 +11,6 @@ class UEquipUI : public USlotUI
 {
 	GENERATED_BODY()
 
-    friend class UPlayerManager;
-
 public:
     virtual void   NativeConstruct        (                                                            ) override;
     virtual FReply NativeOnMouseButtonDown(const FGeometry&, const FPointerEvent&                      ) override;

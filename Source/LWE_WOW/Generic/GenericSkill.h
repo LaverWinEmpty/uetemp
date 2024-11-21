@@ -3,7 +3,7 @@
 #pragma once
 
 #include <LWE_WOW/Status/SkillInfo.h>
-#include <LWE_WOW/Interface/Slotable.h>
+#include <LWE_WOW/UI/SlotInfo.h>
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
@@ -15,7 +15,7 @@ class USkillData;
  * 
  */
 UCLASS()
-class LWE_WOW_API UGenericSkill : public UObject
+class LWE_WOW_API UGenericSkill : public USlot
 {
 	GENERATED_BODY()
 

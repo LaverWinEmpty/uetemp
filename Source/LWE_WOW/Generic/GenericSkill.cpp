@@ -8,6 +8,7 @@
 void UGenericSkill::SetData(USkillData* InData, int InLevel)
 {
 	Data = InData;
+	Icon = InData->Image;
 	SetLevel(InLevel);
 }
 

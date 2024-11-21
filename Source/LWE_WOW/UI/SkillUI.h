@@ -14,8 +14,6 @@ class USkillUI : public USlotUI
 {
 	GENERATED_BODY()
 
-    friend class UPlayerManager;
-
 public:
     USkillUI(const FObjectInitializer&);
 

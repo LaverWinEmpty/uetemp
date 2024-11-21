@@ -4,28 +4,33 @@
 
 #include <LWE_WOW/Generic/GenericItem.h>
 #include <LWE_WOW/Manager/UIManager.h>
+#include <LWE_WOW/Manager/PlayerManager.h>
 #include <LWE_WOW/UI/EquipUI.h>
 
 void UInvenUI::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	//테스트 코드: 아이템 생성
-	if (UDataTable* Table = LoadObject<UDataTable>(nullptr, _T("/Game/Data/Tables/Items.Items"))) {
-		if (FItemData* Row = Table->FindRow<FItemData>(_T("Default"), _T("Player Weapon"))) {
-			AddItem(*Row);
-		}
-		if (FItemData* Row = Table->FindRow<FItemData>(_T("Spear"), _T("Player Weapon"))) {
-			AddItem(*Row);
-		}
-		if (FItemData* Row = Table->FindRow<FItemData>(_T("Axe_0"), _T("Player Weapon"))) {
-			AddItem(*Row);
-		}
-		if (FItemData* Row = Table->FindRow<FItemData>(_T("Axe_1"), _T("Player Weapon"))) {
-			AddItem(*Row);
-		}
-		if (FItemData* Row = Table->FindRow<FItemData>(_T("Hummer"), _T("Player Weapon"))) {
-			AddItem(*Row);
+	if (UPlayerManager::Instance(this)->IsGotItem == false) {
+		UPlayerManager::Instance(this)->IsGotItem = true;
+
+		//테스트 코드: 아이템 생성
+		if (UDataTable* Table = LoadObject<UDataTable>(nullptr, _T("/Game/Data/Tables/Items.Items"))) {
+			if (FItemData* Row = Table->FindRow<FItemData>(_T("Default"), _T("Player Weapon"))) {
+				AddItem(*Row);
+			}
+			if (FItemData* Row = Table->FindRow<FItemData>(_T("Spear"), _T("Player Weapon"))) {
+				AddItem(*Row);
+			}
+			if (FItemData* Row = Table->FindRow<FItemData>(_T("Axe_0"), _T("Player Weapon"))) {
+				AddItem(*Row);
+			}
+			if (FItemData* Row = Table->FindRow<FItemData>(_T("Axe_1"), _T("Player Weapon"))) {
+				AddItem(*Row);
+			}
+			if (FItemData* Row = Table->FindRow<FItemData>(_T("Hummer"), _T("Player Weapon"))) {
+				AddItem(*Row);
+			}
 		}
 	}
 }
@@ -114,7 +119,8 @@ auto UInvenUI::GetEmptySlot()->Slot*
 
 void UInvenUI::AddItem(const FItemData& InData)
 {
-	UGenericItem* NewItem = NewObject<UGenericItem>(this);
+	// 전역 데이터
+	UGenericItem* NewItem = NewObject<UGenericItem>(UPlayerManager::Instance(this));
 	NewItem->SetData(InData);
 
 	if (Slot * Temp = GetEmptySlot()) {
@@ -129,5 +135,5 @@ void UInvenUI::AddItem(const FItemData& InData)
 void UInvenUI::RemoveItem(Slot* In)
 {
 	In->Icon->SetBrushFromSoftTexture(EMPTY);
-	In->Info->MarkAsGarbage();
+	In->Info->MarkAsGarbage(); // 삭제
 }

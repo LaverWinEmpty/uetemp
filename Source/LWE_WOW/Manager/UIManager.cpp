@@ -3,9 +3,17 @@
 #include "Blueprint/WidgetTree.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/TextBlock.h"
+#include "Components/ProgressBar.h"
 
 #include <LWE_WOW/UI/QuickSlotUI.h>
 #include <LWE_WOW/Common/Util.h>
+
+void UUIManager::SetUI()
+{
+    for (int i = UI_BEGIN; i < UI_END; ++i) {
+        Show(static_cast<EUIList>(i), UIShowState[i]);
+    }
+}
 
 UUIManager::UUIManager()
 {
@@ -18,19 +26,21 @@ UUIManager::UUIManager()
         (_T("/Game/UI/UI_QuickSlot_1.UI_QuickSlot_1_C")),
     };
 
-    static constexpr int SIZE = (sizeof(Finder) / sizeof(*Finder));
-    Resource.Init(nullptr, SIZE);
-    for (int i = 0; i < SIZE; ++i) {
-        Resource[i] = Finder[i].Class;
+    if (Resource.Num() == 0) {
+        static constexpr int SIZE = (sizeof(Finder) / sizeof(*Finder));
+        Resource.Init(nullptr, SIZE);
+        for (int i = 0; i < SIZE; ++i) {
+            Resource[i] = Finder[i].Class;
+        }
     }
 }
 
-void UUIManager::Setup()
+bool UUIManager::Setup()
 {
-    if (m_IsSetup) {
-        Cleanup();
+    if (IsSetup) {
+        return false;
     }
-    m_IsSetup = true;
+    IsSetup = true;
 
     int Loop = Resource.Num();
 
@@ -38,6 +48,7 @@ void UUIManager::Setup()
     for (int i = UI_BEGIN; i < UI_END; ++i) {
         Widgets[i] = CreateWidget<UGenericUI>(GetWorld(), Resource[i]);
         Widgets[i]->AddToViewportWithPresetZOrder();
+        Widgets[i]->SetVisibility(ESlateVisibility::Hidden);
     }
 
     // 퀵슬롯 인덱싱
@@ -47,7 +58,6 @@ void UUIManager::Setup()
     }
 
     // 버튼 할당 관련
-
     UPanelWidget* Root, * Panel;
     UButton* Btn;
 
@@ -79,21 +89,28 @@ void UUIManager::Setup()
 
     m_MsgBox = Widgets[UI_MAIN]->WidgetTree->FindWidget<UTextBlock>("MessageBox");
 
-    // 초기값: 숨김
-    Show(UI_INVENTORY, false);
-    Show(UI_EQUIPMENT, false);
-    Show(UI_SKILL,     false);
+    return true;
 }
 
 void UUIManager::Cleanup()
 {
-    for (int i = 0; i < UI_END; ++i) {
-        Widgets[i]->MarkAsGarbage();
+    if (!IsSetup) {
+        return;
     }
-    m_IsSetup = false;
+
+    IsSetup = false;
+    for (int i = 0; i < UI_END; ++i) {
+        Widgets[i] = nullptr;
+    }
     FTimerManager& TimerManager = GetWorld()->GetTimerManager();
     TimerManager.ClearTimer(MessageBoxStarter);
     TimerManager.ClearTimer(MessageBoxUpdater);
+}
+
+void UUIManager::Reset()
+{
+    Cleanup();
+    Setup();
 }
 
 UPanelWidget* UUIManager::GetRoot(UUserWidget* In)
@@ -106,9 +123,13 @@ UPanelWidget* UUIManager::GetRoot(UUserWidget* In)
 
 UUIManager* UUIManager::Instance(UObject* InWorldContextObject)
 {
-    if (UGameInstance* GI = UGameplayStatics::GetGameInstance(InWorldContextObject->GetWorld())) {
-        if (UUIManager* Self = GI->GetSubsystem<UUIManager>()) {
-            return Self;
+    if (IsValid(InWorldContextObject)) {
+        if (UWorld* World = InWorldContextObject->GetWorld()) {
+            if (UGameInstance* GI = UGameplayStatics::GetGameInstance(World)) {
+                if (UUIManager* Self = GI->GetSubsystem<UUIManager>()) {
+                    return Self;
+                }
+            }
         }
     }
     return nullptr;
@@ -134,6 +155,8 @@ void UUIManager::Show(EUIList InIndex, bool Is)
 {
     // 최상위 패널 기준이기 때문에 Visible이 아닌 해당 옵션을 사용합니다.
     Widgets[InIndex]->SetVisibility(Is ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Hidden);
+    // 상태 저장합니다.
+    UIShowState[InIndex] = Is;
 }
 
 void UUIManager::Toggle(EUIList InIndex)

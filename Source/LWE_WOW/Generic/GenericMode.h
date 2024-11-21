@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-
 #include "GenericMode.generated.h"
 
+
 class AGenericCharacter;
+class ALoading;
 
 /**
  * 

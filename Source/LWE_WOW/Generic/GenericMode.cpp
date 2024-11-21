@@ -1,14 +1,18 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GenericMode.h"
+#include "Kismet/GameplayStatics.h"
 
 #include <LWE_WOW/Setting/Default.h>
 #include <LWE_WOW/Common/Util.h>
 #include <LWE_WOW/Manager/UIManager.h>
+#include <LWE_WOW/Manager/LoadingManager.h>
 
 void AGenericMode::StartPlay()
 {
 	Super::StartPlay();
+
+	bUseSeamlessTravel = true;
 
 	// 한 방향의 각도를 0 ~ 179도 사이로 제한합니다
 	// 0 이하, 360 이상은 보정합니다.

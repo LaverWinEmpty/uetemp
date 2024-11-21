@@ -15,8 +15,6 @@ void UQuickSlotUI::NativeConstruct()
     // 모든 퀵슬롯은 동일한 아이콘 개수를 소유해야 합니다.
     check(!(SLOT_MAX && SLOT_MAX != m_Slots.Num()));
     SLOT_MAX = m_Slots.Num();
-
-    m_Input = Cast<AGenericInput>(GetOwningPlayerPawn()->GetController());
 }
 
 FReply UQuickSlotUI::NativeOnMouseButtonDown(const FGeometry& In, const FPointerEvent& InEvent)

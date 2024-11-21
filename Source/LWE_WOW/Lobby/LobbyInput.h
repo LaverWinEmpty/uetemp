@@ -57,8 +57,18 @@ class LWE_WOW_API ALobbyInput : public AGenericInput
 		m_Clicked = nullptr; // 초기화
 
 		m_Camera->SetArmHeight(0);
-	}
 
+		UUIManager* UIM = UUIManager::Instance(this);
+
+		// 해당 UI들은 로비로 오면 끈 상태로 변경합니다.
+		UUIManager::Instance(this)->UIShowState[UUIManager::UI_INVENTORY] = false;
+		UUIManager::Instance(this)->UIShowState[UUIManager::UI_EQUIPMENT] = false;
+		UUIManager::Instance(this)->UIShowState[UUIManager::UI_SKILL]     = false;
+
+		// 저장해야 하나 임시 기능이기 때문에 초기화
+		UPlayerManager::Instance(this)->IsGotItem  = false;
+		UPlayerManager::Instance(this)->IsGotSkill = false;
+	}
 
 public:
 	virtual bool PostInput(bool, EActionID, ETriggerEvent) {
@@ -86,6 +96,7 @@ public:
 			if (m_Clicked == m_Player) {
 				m_Clicked = nullptr;
 			}
+
 			if (m_Clicked) {
 				static const FName LIST[] = {
 					"Attack_0",
@@ -100,11 +111,11 @@ public:
 
 				// 몽타주 재생 중이 아닐 때만
 				if (!m_Clicked->AnimationBase->IsAnyMontagePlaying()) {
-					// 50% 확률로 캐스팅모션
-					if (FMath::Rand() & 1) {
-						m_Clicked->AnimationBase->Montage_Play(m_Clicked->CastingMotion);
-						return true;
-					}
+					//// 50% 확률로 캐스팅모션
+					//if (FMath::Rand() & 1) {
+					//	m_Clicked->AnimationBase->Montage_Play(m_Clicked->CastingMotion);
+					//	return true;
+					//}
 
 					// 몽타주 재생
 					m_Clicked->AnimationBase->Montage_Play(m_Clicked->AttackMotion);
@@ -145,9 +156,9 @@ public:
 			ShowMessageBox();
 			return;
 		}
-		
+
 		UPlayerManager::Instance(this)->PlayerNameOfDatatableRow = m_Clicked->RowName;
-		UGameplayStatics::OpenLevel(GetWorld(), _T("FieldMap"));
+		ULoadingManager::LoadLevel(this, _T("FieldMap"));
 	}
 	
 private:

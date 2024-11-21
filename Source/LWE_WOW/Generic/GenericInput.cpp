@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 
 #include <LWE_WOW/Generic/GenericCharacter.h>
+#include <LWE_WOW/Generic/GenericPlayer.h>
 #include <LWE_WOW/Generic/GenericEffect.h>
 #include <LWE_WOW/Generic/GenericSkill.h>
 #include <LWE_WOW/Manager/UIManager.h>
@@ -96,11 +97,6 @@ void AGenericInput::Initialize(UEnhancedInputComponent* InEIC)
 	Mapping(IA_UI_TOGGLE_INVENTORY, EKeys::I);
 	Mapping(IA_UI_TOGGLE_EQUIPMENT, EKeys::U);
 	Mapping(IA_UI_TOGGLE_SKILL,     EKeys::K);
-
-	// 안전한 생성을 위해 Cleanup -> Setup
-	if (UUIManager* Instance = UUIManager::Instance(this)) {
-		Instance->Setup();
-	}
 }
 
 void AGenericInput::OnPossess(APawn* InPawn)
@@ -138,6 +134,14 @@ void AGenericInput::OnPossess(APawn* InPawn)
 	}
 
 	Initialize(EIC);
+}
+
+void AGenericInput::OnUnPossess()
+{
+	if (UPlayerManager* Instance = UPlayerManager::Instance(this)) {
+		Instance->Save(m_Player);
+	}
+	Super::OnUnPossess();
 }
 
 void AGenericInput::SetupInputComponent()
@@ -226,7 +230,7 @@ void AGenericInput::OnMouseRightClick(bool InFlag)
 			// 눌린게 있는지 확인
 			if (m_Right.Flag) {
 				// 적이면 공격하기 위해 타겟팅
-				if (m_Right.Target && m_Right.Target->GetRelation(m_Player) == ERelationType::HARM) {
+				if (m_Right.Target && (m_Right.Target->GetRelation(m_Player) == ERelationType::HARM)) {
 					SetTargetOfPlayer(m_Right.Target);
 				}
 				// 타겟이 없으면(IInteractable 객체가 아니면) 이동
@@ -251,7 +255,6 @@ void AGenericInput::PlayerAction(EActionID InID)
 void AGenericInput::PlayerAction(UGenericSkill* InSkill)
 {
 	if (!InSkill) {
-		ERROR(0, "Skill is Nullpointer");
 		return;
 	}
 

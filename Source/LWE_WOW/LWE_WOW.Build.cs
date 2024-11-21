@@ -19,6 +19,8 @@ public class LWE_WOW : ModuleRules
             "Slate",
             "SlateCore",
             "AIModule",
+            "MoviePlayer",
+            "Paper2D",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });

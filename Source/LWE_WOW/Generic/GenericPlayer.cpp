@@ -2,11 +2,12 @@
 
 #include <LWE_WOW/Generic/GenericInput.h>
 #include <LWE_WOW/Generic/GenericSkill.h>
-#include <LWE_WOW/Manager/UIManager.h>
 #include <LWE_WOW/Data/SkillData.h>
-#include <LWE_WOW/UI/QuickSlotUI.h>
 #include <LWE_WOW/Data/ItemData.h>
+#include <LWE_WOW/UI/QuickSlotUI.h>
 #include <LWE_WOW/UI/SkillUI.h>
+#include <LWE_WOW/Manager/UIManager.h>
+#include <LWE_WOW/Manager/PlayerManager.h>
 
 auto AGenericPlayer::GetType() const -> ETargetType
 {
@@ -42,7 +43,27 @@ void AGenericPlayer::View(const FVector& InTarget)
 void AGenericPlayer::Initialize()
 {
 	Super::Initialize();
-	Cast<USkillUI>(UUIManager::Instance(this)->Widgets[UUIManager::UI_SKILL])->RegisterSkill();
+	
+	if (UUIManager* UIM = UUIManager::Instance(this)) {
+		// UI 재생성
+		UIM->Reset();
+
+		// 현재 상태(UI 슬롯 정보 등)를 Load 합니다
+		if (UPlayerManager* Instance = UPlayerManager::Instance(this)) {
+			if (Instance->IsSaved) {
+				Instance->Load(this);
+			}
+		}
+
+		// 캐릭터의 스킬을 UI에 등록
+		if (USkillUI* UI = Cast<USkillUI>(UIM->Widgets[UUIManager::UI_SKILL])) {
+			UI->RegisterSkill();
+		}
+
+		// 퀵슬롯 등 보여야 할 UI는 출력합니다.
+		// 상태에 따라서 Inventory 등도 켭니다.
+		UIM->SetUI();
+	}
 }
 
 void AGenericPlayer::SetSkillSlot(EActionID InID, UGenericSkill* InSkill)
@@ -51,12 +72,6 @@ void AGenericPlayer::SetSkillSlot(EActionID InID, UGenericSkill* InSkill)
 	if (!InSkill || !SkillList.Find(InSkill->Data)) {
 		return;
 	}
-
-	//// 슬롯에 세팅
-	//if (SkillSlots.Find(InID)) {
-	//	SkillSlots[InID] = SkillList[InSkill->Data];
-	//}
-	//else SkillSlots.Add(InID, SkillList[InSkill->Data]);
 
 	// 위젯 가져옴
 	UQuickSlotUI* Slots = Cast<UQuickSlotUI>(

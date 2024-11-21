@@ -110,6 +110,7 @@ void AGenericEffect::Enable(float DeltaTime)
 {
     if (!m_Status || !m_Status->IsA<UGenericSkill>() || !IsValid(m_Status) || !m_Status->Data) {
         check(false);
+        return;
     }
 
     // 회전 속도값 적용 시
